@@ -1,1 +1,0 @@
-- [x] Step 1: Edit teachersportal/sidebar.php - Hide Attendance and Tasks links for admins using if(!$is_admin)&#10;- [x] Step 2: Edit teachersportal/attendance.php - Add admin access denial block (similar to task.php)&#10;- [x] Step 3: Verify changes and complete task
