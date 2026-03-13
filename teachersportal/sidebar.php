@@ -35,9 +35,15 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
         <i class="fas fa-chart-line"></i> Grades
     </a>
 
+    <?php if(!$is_admin): ?>
     <a href="/STUDENT%20INFO/teachersportal/attendance.php" class="<?= $current=='attendance.php'?'active':'' ?>">
         <i class="fas fa-calendar-check"></i> Attendance
     </a>
+
+    <a href="/STUDENT%20INFO/task/task.php" class="<?= $current=='task.php'?'active':'' ?>">
+        <i class="fas fa-tasks"></i> Tasks
+    </a>
+    <?php endif; ?>
 
     <a href="/STUDENT%20INFO/teachersportal/subjects.php" class="<?= $current=='subjects.php'?'active':'' ?>">
         <i class="fas fa-book"></i> Subjects & Classes
@@ -49,9 +55,5 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
 
     <a href="/STUDENT%20INFO/teachersportal/announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
         <i class="fas fa-bullhorn"></i> Announcements
-    </a>
-
-    <a href="/STUDENT%20INFO/task/task.php" class="<?= $current=='task.php'?'active':'' ?>">
-        <i class="fas fa-tasks"></i> Tasks
     </a>
 </div>

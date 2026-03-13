@@ -13,16 +13,25 @@ if (!$is_admin) {
     $teacher_section_filter = getSectionFilter('section');
 }
 
-
 // ================== CHECK LOGIN ==================
 if(!isset($_SESSION['teacher_id'])){
     header("Location: ../Accesspage/teacher_login.php");
     exit();
 }
 
+// Block admin access
+if ($is_admin) {
+    echo "<div style='text-align:center; margin-top:50px; font-family:Arial,sans-serif;'>";
+    echo "<h2 style='color:#dc3545;'><i class='fas fa-exclamation-triangle'></i> Access Denied</h2>";
+    echo "<p>Attendance Management is only available for regular teachers.</p>";
+    echo "<p>Admin users cannot access this page.</p>";
+    echo "<a href='dashboard.php' style='display:inline-block; margin-top:20px; padding:10px 20px; background:#0A91AB; color:white; text-decoration:none; border-radius:5px;'>Go Back to Dashboard</a>";
+    echo "</div>";
+    exit();
+}
+
 // ================== DYNAMIC BACK ARROW LOGIC ==================
 $back_url = "../Accesspage/teacher_login.php";
-$admin_types = ['Seeder','Administrator'];
 if(isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types)){
     $back_url = "../teachersportal/chooseSub.php";
 }
@@ -35,7 +44,6 @@ if(empty($selected_course)){
 }
 
 $teacher_id = $_SESSION['teacher_id'];
-
 $allowed_courses = ['BSIT','BSED','BAT','BTVTED'];
 if(!in_array(strtoupper($selected_course), $allowed_courses)){
     echo "<p>No course selected. Please go back and choose a course.</p>";
@@ -53,7 +61,6 @@ $selected_section = $_GET['section'] ?? '';
 // Fetch unique sections
 $sections = [];
 $section_query = mysqli_query($conn,"SELECT DISTINCT section FROM students WHERE course='$selected_course' $teacher_year_filter $year_filter ORDER BY section");
-
 while($row = mysqli_fetch_assoc($section_query)){
     $sections[] = $row['section'];
 }
@@ -83,7 +90,6 @@ $students = mysqli_query($conn,"SELECT id, student_id, first_name, last_name, se
                                WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter $year_filter $section_filter
                                ORDER BY section, last_name");
 
-
 // Fetch current attendance
 $current_attendance = [];
 $att_query = mysqli_query($conn,"SELECT student_id, status FROM attendance WHERE `date`='$date'");
@@ -105,25 +111,24 @@ while($row = mysqli_fetch_assoc($att_query)){
 
 <div class="content">
     <h1><i class="fas fa-calendar-check"></i> <?= htmlspecialchars($selected_course) ?> Attendance</h1>
-   <?php if($message): ?>
-    <div class="message success" id="flashMessage">
-        <i class="fas fa-check-circle"></i> <?= htmlspecialchars($message) ?>
-    </div>
 
-    <script>
-        // Hide the flash message after 3 seconds (3000ms)
-        setTimeout(() => {
-            const flash = document.getElementById('flashMessage');
-            if(flash) {
-                flash.style.transition = 'opacity 0.5s';
-                flash.style.opacity = '0';
-                setTimeout(() => flash.remove(), 500); // Remove from DOM
-            }
-        }, 3000);
-    </script>
-<?php endif; ?>
+    <?php if($message): ?>
+        <div class="message success" id="flashMessage">
+            <i class="fas fa-check-circle"></i> <?= htmlspecialchars($message) ?>
+        </div>
+        <script>
+            setTimeout(() => {
+                const flash = document.getElementById('flashMessage');
+                if(flash) {
+                    flash.style.transition = 'opacity 0.5s';
+                    flash.style.opacity = '0';
+                    setTimeout(() => flash.remove(), 500);
+                }
+            }, 3000);
+        </script>
+    <?php endif; ?>
 
-   <!-- Year Level & Section Filter -->
+    <!-- Year Level & Section Filter -->
     <div class="filter-group">
         <form method="GET" style="display:flex; gap:1rem; align-items:center;">
             <select name="year_level" onchange="this.form.submit()">
@@ -134,17 +139,17 @@ while($row = mysqli_fetch_assoc($att_query)){
                 <option value="4th Year" <?= ($selected_year=='4th Year')?'selected':'' ?>>4th Year</option>
             </select>
 
-          <select name="section" onchange="this.form.submit()">
-    <option value="">All Sections</option>
-    <?php foreach($sections as $sec): ?>
-        <option value="<?= $sec ?>" <?= ($selected_section==$sec)?'selected':'' ?>><?= $sec ?></option>
-    <?php endforeach; ?>
-</select>
+            <select name="section" onchange="this.form.submit()">
+                <option value="">All Sections</option>
+                <?php foreach($sections as $sec): ?>
+                    <option value="<?= $sec ?>" <?= ($selected_section == $sec) ? 'selected' : '' ?>><?= $sec ?></option>
+                <?php endforeach; ?>
+            </select>
 
             <input type="date" name="date" value="<?= htmlspecialchars($date) ?>" onchange="this.form.submit()">
-            
+
             <?php if($selected_year || $selected_section): ?>
-              <a href="attendance.php" class="refresh-btn" title="Clear Filters">↺</a>
+                <a href="attendance.php" class="refresh-btn" title="Clear Filters">↺</a>
             <?php endif; ?>
         </form>
     </div>
@@ -175,23 +180,23 @@ while($row = mysqli_fetch_assoc($att_query)){
                             <td><?= htmlspecialchars($student['year_level']) ?></td>
                             <td><?= htmlspecialchars($student['section']) ?></td>
                             <td>
-    <div class="attendance-buttons" data-student="<?= $student['id'] ?>">
-        <button type="button" class="status-btn <?= $status=='present'?'active':'' ?>" data-value="present">Present</button>
-        <button type="button" class="status-btn <?= $status=='absent'?'active':'' ?>" data-value="absent">Absent</button>
-        <input type="hidden" name="status[<?= $student['id'] ?>]" value="<?= $status ?>">
-    </div>
-</td>
-<td style="text-align:center; color:#065471; font-weight:600;">
-    <?= date("M d, Y", strtotime($date)) ?> 
-    <?php if($date == date('Y-m-d')): ?>
-        <span class="badge" style="background-color:#10b981; color:white; padding:2px 6px; border-radius:4px; margin-left:0.3rem;">Today</span>
-    <?php endif; ?>
-</td>
+                                <div class="attendance-buttons" data-student="<?= $student['id'] ?>">
+                                    <button type="button" class="status-btn <?= $status=='present'?'active':'' ?>" data-value="present">Present</button>
+                                    <button type="button" class="status-btn <?= $status=='absent'?'active':'' ?>" data-value="absent">Absent</button>
+                                    <input type="hidden" name="status[<?= $student['id'] ?>]" value="<?= $status ?>">
+                                </div>
+                            </td>
+                            <td style="text-align:center; color:#065471; font-weight:600;">
+                                <?= date("M d, Y", strtotime($date)) ?>
+                                <?php if($date == date('Y-m-d')): ?>
+                                    <span class="badge" style="background-color:#10b981; color:white; padding:2px 6px; border-radius:4px; margin-left:0.3rem;">Today</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="5" style="text-align: center; padding: 2rem;">
+                        <td colspan="6" style="text-align: center; padding: 2rem;">
                             <i class="fas fa-users" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 0.5rem;"></i>
                             <p>No students found for the selected filters.</p>
                         </td>
@@ -199,7 +204,7 @@ while($row = mysqli_fetch_assoc($att_query)){
                 <?php endif; ?>
                 </tbody>
             </table>
-            
+
             <?php if(mysqli_num_rows($students) > 0): ?>
                 <div style="margin-top: 1.5rem; text-align: right;">
                     <button type="submit" name="save_attendance" class="btn">
@@ -215,7 +220,7 @@ while($row = mysqli_fetch_assoc($att_query)){
 document.querySelectorAll('.attendance-buttons').forEach(container => {
     const buttons = container.querySelectorAll('.status-btn');
     const hiddenInput = container.querySelector('input[type="hidden"]');
-    
+
     buttons.forEach(btn => {
         btn.addEventListener('click', () => {
             buttons.forEach(b => b.classList.remove('active'));
