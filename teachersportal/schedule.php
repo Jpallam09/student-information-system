@@ -198,7 +198,7 @@ $year_colors = ['1st Year'=>'#3b82f6','2nd Year'=>'#10b981','3rd Year'=>'#f59e0b
 
             <div class="card-actions">
                 <?php if ($is_admin): ?>
-                <a href="#" class="edit-schedule" title="Edit"><i class="fas fa-edit"></i></a>
+                <a href="#" class="edit-schedule" title="Edit"><i class="fas fa-pencil"></i></a>
                 <a href="#" class="delete-schedule" title="Delete"><i class="fas fa-trash"></i></a>
                 <?php endif; ?>
             </div>

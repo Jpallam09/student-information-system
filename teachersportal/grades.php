@@ -10,8 +10,12 @@ $admin_types = ['Seeder','Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 if (!$is_admin) {
     $teacher_year_filter = getYearLevelFilter('year_level');
-    $teacher_section_filter = getSectionFilter('section');
+$teacher_section_filter = getSectionFilter('section');
 }
+
+$teacher_year_levels = !$is_admin ? getTeacherYearLevels() : ['1st Year','2nd Year','3rd Year','4th Year'];
+
+
 
 
 // ================== CHECK LOGIN ==================
@@ -215,13 +219,13 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
         <form method="GET" style="display:flex; gap:1rem; align-items:center;">
             <select name="year_level" onchange="this.form.submit()">
                 <option value="">All Year Levels</option>
-                <option value="1st Year" <?= ($selected_year=='1st Year')?'selected':'' ?>>1st Year</option>
-                <option value="2nd Year" <?= ($selected_year=='2nd Year')?'selected':'' ?>>2nd Year</option>
-                <option value="3rd Year" <?= ($selected_year=='3rd Year')?'selected':'' ?>>3rd Year</option>
-                <option value="4th Year" <?= ($selected_year=='4th Year')?'selected':'' ?>>4th Year</option>
+                <?php foreach($teacher_year_levels as $yl): ?>
+                <option value="<?= htmlspecialchars($yl) ?>" <?= ($selected_year==$yl)?'selected':'' ?>><?= htmlspecialchars($yl) ?></option>
+                <?php endforeach; ?>
             </select>
 
             <select name="section" onchange="this.form.submit()">
+
                 <option value="">All Sections</option>
                 <?php foreach($available_sections as $sec): ?>
                     <option value="<?= $sec ?>" <?= ($selected_section==$sec)?'selected':'' ?>><?= $sec ?></option>

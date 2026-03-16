@@ -84,7 +84,7 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
         }
 
         function confirmLogout() {
-            window.location.href = 'teacher_logout.php';
+            window.location.href = 'logout.php';
         }
 
         // Close modal on outside click

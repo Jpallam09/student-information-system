@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 include '../config/database.php';
@@ -128,7 +127,7 @@ foreach ($subjects as &$subject) {
     $subject_stats[$subj_id] = [
         'total' => $total_tasks,
         'submitted' => $submitted_count,
-'pending' => max(0, $total_tasks - $submitted_count)
+        'pending' => max(0, $total_tasks - $submitted_count)
     ];
 }
 
@@ -205,7 +204,7 @@ if (!empty($current_task_ids)) {
 
         <div class="card" style="cursor: default;">
             <h3><i class="fas fa-clock"></i> Pending</h3>
-<h1 style="color: var(--accent-amber);"><?php echo max(0, $total_tasks - $total_submitted); ?></h1>
+            <h1 style="color: var(--accent-amber);"><?php echo max(0, $total_tasks - $total_submitted); ?></h1>
             <p>Not yet submitted</p>
         </div>
     </div>
@@ -286,7 +285,9 @@ if (!empty($current_task_ids)) {
                                 <span class="task-subject"><i class="fas fa-book"></i> <?php echo htmlspecialchars($task['subject_name']); ?></span>
                             </div>
                             <?php if($task['is_submitted']): ?>
-                                <span class="badge badge-green"><i class="fas fa-check"></i> Submitted</span>
+                                <span class="badge badge-green teacher-read-status" data-task-id="<?php echo $task['id']; ?>" data-teacher-read="0">
+                                    <i class="fas fa-clock"></i> Submitted
+                                </span>
                             <?php else: ?>
                                 <span class="badge badge-yellow"><i class="fas fa-clock"></i> Pending</span>
                             <?php endif; ?>
@@ -327,7 +328,9 @@ if (!empty($current_task_ids)) {
                                 <span class="task-subject"><i class="fas fa-book"></i> <?php echo htmlspecialchars($task['subject_name']); ?></span>
                             </div>
                             <?php if($task['is_submitted']): ?>
-                                <span class="badge badge-green"><i class="fas fa-check"></i> Submitted</span>
+                                <span class="badge badge-green teacher-read-status" data-task-id="<?php echo $task['id']; ?>" data-teacher-read="0">
+                                    <i class="fas fa-clock"></i> Submitted
+                                </span>
                             <?php else: ?>
                                 <span class="badge badge-yellow"><i class="fas fa-clock"></i> Pending</span>
                             <?php endif; ?>
@@ -381,7 +384,7 @@ if (!empty($current_task_ids)) {
                     <i class="fas fa-paperclip"></i> <span id="viewAttachmentName"></span>
                 </a>
             </div>
-<div class="task-detail-row">
+            <div class="task-detail-row">
                 <span class="task-detail-label">Date Posted</span>
                 <span class="task-detail-value" id="viewTaskDate"></span>
             </div>
@@ -536,6 +539,43 @@ let currentTaskId = null;
 
 const sseStudentUrl = 'sse_student.php';
 
+// NEW: Function to update teacher read badge
+function updateTeacherReadStatus(taskId, teacherRead) {
+    const statusEl = document.querySelector(`.teacher-read-status[data-task-id="${taskId}"]`);
+    if (statusEl) {
+        statusEl.dataset.teacherRead = teacherRead ? '1' : '0';
+        if (teacherRead == 1) {
+            statusEl.innerHTML = '<i class="fas fa-eye"></i> Teacher Viewed';
+            statusEl.style.background = '#10b981';
+            statusEl.style.color = 'white';
+        } else {
+            statusEl.innerHTML = '<i class="fas fa-clock"></i> Submitted';
+            statusEl.style.background = '';
+            statusEl.style.color = '';
+        }
+    }
+}
+
+// NEW: Load initial teacher read status for submitted tasks
+function loadInitialTeacherReadStatus() {
+    const submittedBadges = document.querySelectorAll('.teacher-read-status[data-teacher-read="0"]');
+    submittedBadges.forEach(badge => {
+        const taskId = badge.dataset.taskId;
+        fetch(`../task/get_submissions.php?task_id=${taskId}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.submissions) {
+                    const studentId = <?php echo $student_id; ?>;
+                    const submission = data.submissions.find(s => parseInt(s.student_id) === studentId);
+                    if (submission && submission.teacher_read == 1) {
+                        updateTeacherReadStatus(taskId, 1);
+                    }
+                }
+            })
+            .catch(err => console.log('Load status error:', err));
+    });
+}
+
 function connectStudentRealtime() {
     if (studentEventSource) studentEventSource.close();
     
@@ -544,16 +584,8 @@ function connectStudentRealtime() {
     studentEventSource.onmessage = function(event) {
         const updates = JSON.parse(event.data);
         updates.forEach(update => {
-            const statusEl = document.querySelector(`.teacher-read-status[data-task-id="${update.task_id}"]`);
-            if (statusEl && statusEl.dataset.teacherRead === '0') {
-                statusEl.dataset.teacherRead = '1';
-                statusEl.innerHTML = '<i class="fas fa-eye"></i> Viewed';
-                statusEl.style.background = '#10b981';
-                statusEl.style.color = 'white';
-                
-                // Toast notification
-                showStudentNotification(`"${update.task_title}" viewed by teacher!`);
-            }
+            updateTeacherReadStatus(update.task_id, 1);
+            showStudentNotification(`"${update.task_title}" viewed by teacher!`);
         });
     };
     
@@ -566,15 +598,14 @@ function connectStudentRealtime() {
 function startStudentPolling() {
     if (studentPollInterval) clearInterval(studentPollInterval);
     studentPollInterval = setInterval(() => {
-        // Quick check for teacher read updates
         fetch('sse_student.php')
             .then(r => r.text())
             .then(data => {
                 if (data.includes('"teacher_read":1')) {
-                    location.reload(); // Full refresh on polling detect
+                    location.reload();
                 }
             });
-    }, 15000); // 15s
+    }, 15000);
 }
 
 function showStudentNotification(message) {
@@ -595,13 +626,17 @@ function showStudentNotification(message) {
     }, 5000);
 }
 
-// Connect on page load
-window.addEventListener('load', connectStudentRealtime);
+// Init on load
+window.addEventListener('load', () => {
+    connectStudentRealtime();
+    loadInitialTeacherReadStatus();
+});
 window.addEventListener('beforeunload', () => {
     if (studentEventSource) studentEventSource.close();
     if (studentPollInterval) clearInterval(studentPollInterval);
 });
 
+// Rest of JS unchanged...
 function toggleSection(type) {
     const content = document.getElementById('section-' + type + '-content');
     const header = document.querySelector('#section-' + type + ' .task-type-header');
@@ -640,13 +675,11 @@ function toggleSection(type) {
 }
 
 function scrollToSection(subjectId) {
-    // Scroll to first task section
     const sections = ['activities', 'homework', 'laboratory'];
     for (let section of sections) {
         const el = document.getElementById('section-' + section);
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            // Open the section
             if (document.getElementById('section-' + section + '-content').style.display === 'none') {
                 toggleSection(section);
             }
@@ -655,7 +688,6 @@ function scrollToSection(subjectId) {
     }
 }
 
-// View Task Details
 function viewTask(taskId) {
     fetch('../task/get_task.php?id=' + taskId)
         .then(response => response.json())
@@ -668,7 +700,6 @@ function viewTask(taskId) {
                 document.getElementById('viewTaskDescription').textContent = task.description || 'No description';
                 document.getElementById('viewTaskDate').textContent = task.created_at ? new Date(task.created_at).toLocaleDateString() : 'N/A';
                 
-                // Display due date if set
                 if (task.due_date) {
                     const dueDateRow = document.getElementById('viewDueDateRow');
                     const dueDateEl = document.getElementById('viewTaskDueDate');
@@ -790,61 +821,73 @@ document.addEventListener('keydown', function(event) {
 // Store current submission data for edit/delete
 let currentSubmissionData = null;
 
-// View My Submission - Updated to store data
+// Enhanced View My Submission with teacher read indicator
 function viewMySubmission(taskId) {
     fetch('../task/get_submissions.php?task_id=' + taskId)
-        .then(response => response.text())
-        .then(text => {
-            console.log('Submissions response:', text);
-            try {
-                var data = JSON.parse(text);
-                if (data.success && data.submissions && data.submissions.length > 0) {
-                    // Find this student's submission
-                    var studentId = <?php echo $student_id; ?>;
-                    var submission = data.submissions.find(function(s) { return s.student_id == studentId; });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.submissions && data.submissions.length > 0) {
+                const studentId = <?php echo $student_id; ?>;
+                const submission = data.submissions.find(s => parseInt(s.student_id) === studentId);
+                
+                if (submission) {
+                    currentSubmissionData = {
+                        taskId: taskId,
+                        taskTitle: data.task.title,
+                        filePath: submission.file_path,
+                        originalFilename: submission.original_filename,
+                        notes: submission.notes,
+                        teacherRead: submission.teacher_read == 1
+                    };
                     
-                    if (submission) {
-                        // Store submission data for edit/delete
-                        currentSubmissionData = {
-                            taskId: taskId,
-                            taskTitle: data.task.title,
-                            filePath: submission.file_path,
-                            originalFilename: submission.original_filename,
-                            notes: submission.notes
-                        };
-                        
-                        // Set hidden field for edit/delete
-                        document.getElementById('viewSubmissionTaskId').value = taskId;
-                        document.getElementById('submissionTaskTitle').textContent = data.task.title;
-                        document.getElementById('submissionDate').textContent = new Date(submission.submitted_at).toLocaleString();
-                        document.getElementById('submissionNotes').textContent = submission.notes || 'No notes';
-                        
-                        if (submission.file_path) {
-                            document.getElementById('submissionFileLink').style.display = 'inline-flex';
-                            document.getElementById('submissionFileLink').href = '../task/student_uploads/' + submission.file_path;
-                            document.getElementById('submissionFileName').textContent = submission.original_filename || submission.file_path;
-                        } else {
-                            document.getElementById('submissionFileLink').style.display = 'none';
-                        }
-                        
-                        document.getElementById('viewSubmissionModal').classList.add('show');
+                    document.getElementById('viewSubmissionTaskId').value = taskId;
+                    document.getElementById('submissionTaskTitle').textContent = data.task.title;
+                    document.getElementById('submissionDate').textContent = new Date(submission.submitted_at).toLocaleString();
+                    document.getElementById('submissionNotes').textContent = submission.notes || 'No notes';
+                    
+                    if (submission.file_path) {
+                        document.getElementById('submissionFileLink').style.display = 'inline-flex';
+                        document.getElementById('submissionFileLink').href = '../task/student_uploads/' + submission.file_path;
+                        document.getElementById('submissionFileName').textContent = submission.original_filename || submission.file_path;
                     } else {
-                        alert('Your submission not found in the list');
+                        document.getElementById('submissionFileLink').style.display = 'none';
                     }
+                    
+                    // NEW: Show teacher read status in modal
+                    const teacherStatus = document.getElementById('teacherReadStatus') || createTeacherStatus();
+                    if (submission.teacher_read == 1) {
+                        teacherStatus.innerHTML = '<i class="fas fa-eye text-success"></i> Teacher has viewed your submission';
+                        teacherStatus.style.color = '#10b981';
+                    } else {
+                        teacherStatus.innerHTML = '<i class="fas fa-clock text-warning"></i> Awaiting teacher review';
+                        teacherStatus.style.color = '#f59e0b';
+                    }
+                    
+                    document.getElementById('viewSubmissionModal').classList.add('show');
                 } else {
-                    alert('No submission found for this task');
+                    alert('Your submission not found');
                 }
-            } catch(e) {
-                alert('Error parsing response: ' + e.message + '\nResponse: ' + text.substring(0, 200));
+            } else {
+                alert('No submission found for this task');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error loading submission: ' + error.message);
+            alert('Error loading submission');
         });
 }
 
-// Edit Submission
+// NEW: Create teacher status element
+function createTeacherStatus() {
+    const div = document.createElement('div');
+    div.id = 'teacherReadStatus';
+    div.style.cssText = 'margin-top: 15px; padding: 10px; border-radius: 6px; background: var(--slate-50); font-weight: 500; display: flex; align-items: center; gap: 8px;';
+    const container = document.querySelector('#viewSubmissionModal .task-modal-body');
+    container.appendChild(div);
+    return div;
+}
+
+// Rest of functions (edit, delete) unchanged...
 function openEditSubmissionModal() {
     if (!currentSubmissionData) {
         alert('No submission data available');
@@ -873,7 +916,6 @@ function closeEditSubmissionModal() {
     document.getElementById('editSubmissionModal').classList.remove('show');
 }
 
-// Handle Edit Submission Form
 document.getElementById('editSubmissionForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -914,7 +956,6 @@ document.getElementById('editSubmissionForm').addEventListener('submit', functio
     });
 });
 
-// Delete Submission
 function openDeleteSubmissionModal() {
     if (!currentSubmissionData) {
         alert('No submission data available');
@@ -958,22 +999,17 @@ function confirmDeleteSubmission() {
     });
 }
 
-// Quick delete from task card - opens confirmation directly
 function quickDeleteSubmission(taskId, taskTitle) {
-    // Set the submission data for quick delete
     currentSubmissionData = {
         taskId: taskId,
         taskTitle: taskTitle
     };
     
-    // Show the task title in the delete modal
     document.getElementById('deleteSubmissionTaskTitle').textContent = taskTitle;
     
-    // Show the delete confirmation modal
     document.getElementById('deleteSubmissionModal').classList.add('show');
 }
-</script>
+    </script>
 
 </body>
 </html>
-

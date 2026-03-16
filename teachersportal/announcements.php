@@ -211,7 +211,7 @@ $priorityLevels = ['low','medium','high'];
                 <p><?= htmlspecialchars($row['content']) ?></p>
                 <small><?= date('M d, Y h:i A', strtotime($row['created_at'])) ?></small>
                 <div class="card-actions">
-                    <a href="#" class="edit-announcement" title="Edit"><i class="fas fa-edit"></i></a>
+                    <a href="#" class="edit-announcement" title="Edit"><i class="fas fa-pencil"></i></a>
                     <a href="#" class="toggle-pin" data-id="<?= $row['id'] ?>" title="Unpin"><i class="fas fa-thumbtack"></i></a>
                     <a href="#" class="delete-announcement" data-id="<?= $row['id'] ?>" title="Delete"><i class="fas fa-trash"></i></a>
                 </div>
@@ -246,7 +246,7 @@ $priorityLevels = ['low','medium','high'];
                     <p><?= htmlspecialchars($row['content']) ?></p>
                     <small><?= date('M d, Y h:i A', strtotime($row['created_at'])) ?></small>
                     <div class="card-actions">
-                        <a href="#" class="edit-announcement" title="Edit"><i class="fas fa-edit"></i></a>
+                        <a href="#" class="edit-announcement" title="Edit"><i class="fas fa-pencil"></i></a>
                         <a href="#" class="toggle-pin" data-id="<?= $row['id'] ?>" title="Pin"><i class="fas fa-thumbtack"></i></a>
                         <a href="#" class="delete-announcement" data-id="<?= $row['id'] ?>" title="Delete"><i class="fas fa-trash"></i></a>
                     </div>

@@ -29,14 +29,22 @@ if (!$is_admin) {
 }
 
 // ================== DELETE CLASS ==================
-if (isset($_POST['delete_class_id'])) {
-    $delete_id = intval($_POST['delete_class_id']);
-
-    mysqli_query($conn, "DELETE FROM classes WHERE id='$delete_id'");
-
+if (isset($_GET['delete'])) {
+    $delete_id = intval($_GET['delete']);
+    if ($is_admin) {
+        mysqli_query($conn, "DELETE FROM classes WHERE id='$delete_id'");
+    }
     header("Location: subjects.php");
     exit();
 }
+
+if (isset($_POST['delete_class_id'])) {
+    $delete_id = intval($_POST['delete_class_id']);
+    mysqli_query($conn, "DELETE FROM classes WHERE id='$delete_id'");
+    header("Location: subjects.php");
+    exit();
+}
+
 
 // ================== UPDATE CLASS ==================
 if (isset($_POST['update_class_id'])) {
@@ -287,7 +295,7 @@ echo "<tr><td colspan='5'>No subjects found.</td></tr>";
 
 </div>
 
-<div class="cards" style="margin-top:20px;">
+    <div class="cards" style="margin-top:20px;">
 
 <?php
 
@@ -297,13 +305,26 @@ while ($class = mysqli_fetch_assoc($classes_query)):
 
 ?>
 
-<div class="card">
+<div class="card" 
+     data-id="<?= $class['id'] ?>" 
+     data-section="<?= htmlspecialchars($class['section'],ENT_QUOTES) ?>" 
+     data-year="<?= htmlspecialchars($class['year_level'],ENT_QUOTES) ?>">
 
 <h3>Section <?= htmlspecialchars($class['section']) ?></h3>
 
 <p>Year Level: <?= htmlspecialchars($class['year_level']) ?></p>
 
-<p><?= $class['student_count'] ?> Students</p>
+
+        <p><?= $class['student_count'] ?> Students</p>
+        
+        <?php if ($is_admin): ?>
+        <div class="card-actions">
+            <a href="#" class="edit-class" title="Edit"><i class="fas fa-pencil"></i></a>
+            <a href="#" class="delete-class" title="Delete"><i class="fas fa-trash"></i></a>
+        </div>
+        <?php endif; ?>
+
+
 
 </div>
 
@@ -321,7 +342,118 @@ echo "<p>No classes found for this course.</p>";
 
 </div>
 
+<!-- Edit Class Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2><i class="fas fa-edit"></i> Edit Class</h2>
+        <form method="POST" id="editForm">
+            <input type="hidden" name="update_class_id" id="edit_id">
+            
+            <div class="form-group">
+                <label for="edit_section">Section</label>
+                <input type="text" name="section" id="edit_section" required maxlength="1" pattern="[A-E]">
+            </div>
+            
+            <div class="form-group">
+                <label for="edit_year_level">Year Level</label>
+                <select name="year_level" id="edit_year_level" required>
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                    <option value="4th Year">4th Year</option>
+                </select>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn-outline" id="cancelEditBtn">Cancel</button>
+                <button type="submit" class="btn">Save Changes</button>
+            </div>
+        </form>
+    </div>
 </div>
+
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content small">
+        <span class="close-delete-modal close">&times;</span>
+        <h2><i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> Confirm Delete</h2>
+        <p>Are you sure you want to delete this class? This action cannot be undone.</p>
+        <div class="modal-actions">
+            <button id="cancelDeleteBtn" class="btn-outline">Cancel</button>
+            <a href="#" id="confirmDeleteBtn" class="btn-danger">Delete</a>
+        </div>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+    var editModal = document.getElementById("editModal");
+    var deleteModal = document.getElementById("deleteModal");
+    var editForm = document.getElementById("editForm");
+    let deleteUrl = '';
+
+    // Edit class events
+    document.querySelectorAll(".edit-class").forEach(function(btn){
+        btn.addEventListener("click", function(e){
+            e.preventDefault();
+            var card = btn.closest(".card");
+            document.getElementById("edit_id").value = card.dataset.id;
+            document.getElementById("edit_section").value = card.dataset.section;
+            document.getElementById("edit_year_level").value = card.dataset.year;
+            editModal.style.display = "flex";
+        });
+    });
+
+    // Delete class events
+    document.querySelectorAll(".delete-class").forEach(function(btn){
+        btn.addEventListener("click", function(e){
+            e.preventDefault();
+            var card = btn.closest(".card");
+            deleteUrl = '?delete=' + card.dataset.id;
+            document.getElementById("confirmDeleteBtn").href = deleteUrl;
+            deleteModal.style.display = "flex";
+        });
+    });
+
+    // Close modals
+    document.querySelectorAll(".close").forEach(function(span){
+        span.addEventListener("click", function(){ 
+            editModal.style.display = "none";
+            deleteModal.style.display = "none";
+        });
+    });
+
+    // Delete modal specific close buttons
+    document.querySelector('.close-delete-modal').addEventListener("click", function(){
+        deleteModal.style.display = "none";
+    });
+    
+    document.getElementById('cancelDeleteBtn').addEventListener("click", function(){
+        deleteModal.style.display = "none";
+    });
+
+
+    // Close on outside click
+    window.onclick = function(event) {
+        if (event.target == editModal) editModal.style.display = "none";
+        if (event.target == deleteModal) deleteModal.style.display = "none";
+    }
+    
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    // Edit modal cancel button
+    document.getElementById('cancelEditBtn').addEventListener("click", function(){
+        editModal.style.display = "none";
+    });
+});
+</script>
+
 
 </body>
 
