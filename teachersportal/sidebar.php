@@ -11,8 +11,8 @@ $admin_types = ['Seeder', 'Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 ?>
 <div class="sidebar">
-    <a href="<?= $back_url ?>" class="back-arrow">
-        <i class="fas fa-arrow-left"></i>
+    <a href="#" class="back-arrow logout-btn" onclick="showLogoutConfirmation(event)">
+        <i class="fas fa-sign-out-alt"></i>
     </a>
        <img src="../images/622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 80px; display: block; margin: 40px auto 15px auto;border-radius: 5px; animation: float 3s ease-in-out infinite;">
     <?php if ($is_admin): ?>
@@ -43,7 +43,7 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     <a href="/STUDENT%20INFO/task/task.php" class="<?= $current=='task.php'?'active':'' ?>">
         <i class="fas fa-tasks"></i> Tasks
     </a>
-    <?php endif; ?>
+<?php endif; ?>
 
     <a href="/STUDENT%20INFO/teachersportal/subjects.php" class="<?= $current=='subjects.php'?'active':'' ?>">
         <i class="fas fa-book"></i> Subjects & Classes
@@ -56,4 +56,49 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     <a href="/STUDENT%20INFO/teachersportal/announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
         <i class="fas fa-bullhorn"></i> Announcements
     </a>
-</div>
+    </div>
+
+    <!-- Logout Modal -->
+    <div id="logoutModal" class="modal">
+        <div class="modal-content">
+            <h3>Confirm Logout</h3>
+            <p>Are you sure you want to logout?</p>
+            <div class="modal-buttons">
+                <button class="btn-logout" onclick="confirmLogout()">Yes, Logout</button>
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('logoutModal');
+
+        function showLogoutConfirmation(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            modal.classList.add('show');
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+        }
+
+        function confirmLogout() {
+            window.location.href = 'teacher_logout.php';
+        }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
+

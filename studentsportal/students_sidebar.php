@@ -15,10 +15,14 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard</title>
     <link rel="stylesheet" href="../css/studentportal.css">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
     <!-- Sidebar -->
     <div class="sidebar">
+           <a href="#" class="back-arrow logout-btn" onclick="showLogoutConfirmation(event)">
+        <i class="fas fa-sign-out-alt"></i>
+    </a>
         <div class="sidebar-header">
             <img src="../images/622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 80px; display: block; margin: 40px auto 15px auto;border-radius: 5px; animation: float 3s ease-in-out infinite;">
 <h2 style="margin-top: 5px;"><i class="fas fa-graduation-cap"></i>Student's Portal</h2>
@@ -26,15 +30,30 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </div>
 
         <div class="menu">
-            <a href="students_dashboard.php" class="<?php echo ($current_page == 'students_dashboard.php') ? 'active' : ''; ?>">My Dashboard🏠</a>
-            <a href="students_profile.php" class="<?php echo ($current_page == 'students_profile.php') ? 'active' : ''; ?>">My Profile👤</a>
-            <a href="students_grades.php" class="<?php echo ($current_page == 'students_grades.php') ? 'active' : ''; ?>">My Grades📊</a>
-            <a href="students_classSchedule.php" class="<?php echo ($current_page == 'students_classSchedule.php') ? 'active' : ''; ?>">My Class Schedules🗓</a>
-            <a href="students_subjects&teachers.php" class="<?php echo ($current_page == 'students_subjects&teachers.php') ? 'active' : ''; ?>">Subjects&Teachers📚</a>
-            <a href="students_attendance.php" class="<?php echo ($current_page == 'students_attendance.php') ? 'active' : ''; ?>">My Attendance📋</a>
-            <a href="students_announcements.php" class="<?php echo ($current_page == 'students_announcements.php') ? 'active' : ''; ?>">Announcements 📢</a>
-            <a href="students_tasks.php" class="<?php echo ($current_page == 'students_tasks.php') ? 'active' : ''; ?>">My Tasks📝</a>
-            <a href="#" class="logout <?php echo ($current_page == 'logout') ? 'active' : ''; ?>" onclick="showLogoutConfirmation(event)">Logout🚪?</a>
+            <a href="/STUDENT%20INFO/studentsportal/students_dashboard.php" class="<?= $current=='students_dashboard.php'?'active':'' ?>">
+        <i class="fas fa-th-large"></i> Dashboard
+    </a>
+            <a href="/STUDENT%20INFO/studentsportal/students_profile.php" class="<?= $current=='students_profile.php'?'active':'' ?>">
+        <i class="fas fa-user"></i> My Profile
+    </a>
+            <a href="/STUDENT%20INFO/studentsportal/students_grades.php" class="<?= $current=='students_grades.php'?'active':'' ?>">
+        <i class="fas fa-chart-line"></i> My Grades
+    </a>
+            <a href="/STUDENT%20INFO/studentsportal/students_classSchedule.php" class="<?= $current=='students_classSchedule.php'?'active':'' ?>">
+        <i class="fas fa-calendar-alt"></i> My Class Schedules
+    </a>
+            <a href="/STUDENT%20INFO/studentsportal/students_subjects&teachers.php" class="<?= $current=='students_subjects&teachers.php'?'active':'' ?>">
+        <i class="fas fa-book"></i> Subjects & Teachers
+    </a>
+            <a href="/STUDENT%20INFO/studentsportal/students_attendance.php" class="<?= $current=='students_attendance.php'?'active':'' ?>">
+        <i class="fas fa-calendar-check"></i> My Attendance
+    </a>
+            <a href="/STUDENT%20INFO/studentsportal/students_announcements.php" class="<?= $current=='students_announcements.php'?'active':'' ?>">
+        <i class="fas fa-bullhorn"></i> Announcements
+    </a>
+            <a href="/STUDENT%20INFO/studentsportal/students_tasks.php" class="<?= $current=='students_tasks.php'?'active':'' ?>">
+        <i class="fas fa-tasks"></i> My Tasks
+    </a>
         </div>
     </div>
 
