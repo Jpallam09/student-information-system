@@ -45,12 +45,16 @@ $course_id = $course_row['id'];
  * Includes subjects for the student’s section OR general subjects (no section)
  */
 $subjects_query = mysqli_query($conn, "
-    SELECT code, subject_name, description, room, day, time_start, time_end, instructor, section
-    FROM subjects
-    WHERE course_id='$course_id'
-      AND year_level='$year'
-      AND (section IS NULL OR section='' OR section='$section')
-    ORDER BY subject_name ASC
+    SELECT s.code, s.subject_name, s.description, s.room, s.day, s.time_start, s.time_end, 
+           s.instructor, s.section,
+           CONCAT(t.first_name, ' ', IFNULL(t.middle_name, ''), ' ', t.last_name, ' ', IFNULL(t.suffix, '')) AS instructor_name,
+           t.email AS instructor_email
+    FROM subjects s
+    LEFT JOIN teachers t ON s.instructor = t.teacher_id
+    WHERE s.course_id='$course_id'
+      AND s.year_level='$year'
+      AND (s.section IS NULL OR s.section='' OR s.section='$section')
+    ORDER BY s.subject_name ASC
 ") or die(mysqli_error($conn));
 
 $subjects = [];
@@ -100,10 +104,10 @@ while($row = mysqli_fetch_assoc($subjects_query)){
                 </p>
 
                 <!-- Instructor -->
-                <p><span class="label">Instructor:</span> <?= htmlspecialchars($subject['instructor']) ?></p>
+                <p><span class="label">Instructor:</span> <?= htmlspecialchars($subject['instructor_name'] ?: $subject['instructor']) ?></p>
 
-                <!-- Placeholder for Email -->
-                <p><span class="label">Email:</span> -</p>
+                <!-- Instructor Email -->
+                <p><span class="label">Email:</span> <?= htmlspecialchars($subject['instructor_email'] ?: '-') ?></p>
             </div>
         <?php endforeach; ?>
     <?php else: ?>

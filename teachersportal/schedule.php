@@ -139,6 +139,7 @@ $subjects_query = mysqli_query($conn, "
 while($row = mysqli_fetch_assoc($subjects_query)){
     $schedules[$row['day']][] = [
         'id' => 'sub'.$row['id'], // differentiate from manual schedules
+        'code' => $row['code'],
         'subject' => $row['subject_name'],
         'year_level' => $row['year_level'],
         'section' => $row['section'] ?? '',
@@ -190,8 +191,8 @@ $year_colors = ['1st Year'=>'#3b82f6','2nd Year'=>'#10b981','3rd Year'=>'#f59e0b
              data-end="<?= $sched['time_end'] ?>" 
              data-room="<?= htmlspecialchars($sched['room'],ENT_QUOTES) ?>">
 
-            <div class="year-badge" style="background:<?= $color ?>"><?= $sched['year_level'] ?></div>
-            <h3><?= htmlspecialchars($sched['subject']) ?></h3>
+<div class="year-badge" style="background:<?= $color ?>"><?= $sched['year_level'] ?></div>
+            <h3><?= htmlspecialchars($sched['code'] ?? '') ?> - <?= htmlspecialchars($sched['subject']) ?></h3>
             <p>Section: <?= htmlspecialchars($sched['section']) ?></p>
             <p><?= date("h:i A", strtotime($sched['time_start'])) ?> - <?= date("h:i A", strtotime($sched['time_end'])) ?></p>
             <p>Room: <?= htmlspecialchars($sched['room']) ?></p>

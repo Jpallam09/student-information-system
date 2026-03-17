@@ -140,7 +140,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <input type="text" name="middle_name" placeholder="Middle Name">
                 <input type="text" name="last_name" placeholder="Last Name" required>
                 <input type="text" name="suffix" placeholder="Suffix">
-                <input type="date" name="dob" required>
+                <label for="dob">Date of Birth</label>
+                <input type="date" name="dob" required onchange="calculateAge(this)">
+</xai:function_call {
+
+
+
+<xai:function_call name="edit_file">
+<parameter name="path">
+                 <input type="number" name="age" placeholder="Age" required>
 
                 <select name="gender" required>
                     <option value="">Select Gender</option>
@@ -238,7 +246,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <h1>Welcome to<br>Teacher<br>Information<br>Management</h1>
     </div>
 
+    <script>
+    function calculateAge(dobInput) {
+        const dob = new Date(dobInput.value);
+        if (isNaN(dob.getTime())) return;
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+        const ageField = dobInput.parentNode.querySelector('input[name="age"]');
+        if (ageField) {
+            ageField.value = Math.max(0, age);
+        }
+    }
+    </script>
+
 </div>
 
 </body>
+</xai:function_call {
+
+<xai:function_call name="edit_file">
+<parameter name="path">TODO.md
 </html>

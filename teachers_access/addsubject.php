@@ -26,6 +26,13 @@ if(!$course_result || mysqli_num_rows($course_result) == 0){
 $course_row = mysqli_fetch_assoc($course_result);
 $course_id = $course_row['id'];
 
+// Fetch teachers registered for this course (with year_levels and sections)
+$teachers_query = mysqli_query($conn, "SELECT id, teacher_id, CONCAT(first_name, ' ', IFNULL(middle_name, ''), ' ', last_name, ' ', IFNULL(suffix, '')) AS full_name, year_levels, sections FROM teachers WHERE course='$course'");
+$teachers = [];
+while($t = mysqli_fetch_assoc($teachers_query)) {
+    $teachers[] = $t;
+}
+
 $message = '';
 $message_type = '';
 
@@ -87,11 +94,11 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                 <div class="form-row">
                     <div>
                         <label for="code">Subject Code</label>
-                        <input type="text" id="code" name="code" placeholder="e.g., CS101" required>
+                        <input type="text" id="code" name="code" placeholder="e.g., CS101" required oninput="this.value = this.value.toUpperCase()">
                     </div>
                     <div>
                         <label for="subject_name">Subject Name</label>
-                        <input type="text" id="subject_name" name="subject_name" placeholder="e.g., Computer Science" required>
+                        <input type="text" id="subject_name" name="subject_name" placeholder="e.g., Computer Science" oninput="this.value = this.value.toUpperCase()" required>
                     </div>
                 </div>
                 <div class="form-row">
@@ -119,11 +126,16 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                 <div class="form-row">
                     <div>
                         <label for="room">Room</label>
-                        <input type="text" id="room" name="room" placeholder="e.g., Room 101" required>
+                        <input type="text" id="room" name="room" placeholder="e.g., Room 101" oninput="this.value = this.value.toUpperCase()"required>
                     </div>
                     <div>
                         <label for="instructor">Instructor</label>
-                        <input type="text" id="instructor" name="instructor" placeholder="Instructor Name" required>
+                        <select id="instructor" name="instructor" required>
+                            <option value="">Select Instructor for <?= htmlspecialchars($course) ?></option>
+                            <?php foreach($teachers as $teacher): ?>
+                                <option value="<?= htmlspecialchars($teacher['teacher_id']) ?>"><?= htmlspecialchars($teacher['full_name']) ?> (<?= htmlspecialchars($teacher['teacher_id']) ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                 </div>
                 <div class="form-row">
@@ -165,6 +177,50 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         <h1>Subject<br>Management</h1>
     </div>
 </div>
+
+<script>
+const allTeachers = <?= json_encode($teachers) ?>;
+
+function filterInstructors() {
+    const yearLevel = document.getElementById('year_level').value.trim();
+    const section = document.getElementById('section').value.trim().toUpperCase();
+    const instructorSelect = document.getElementById('instructor');
+    
+    // Clear existing options except first
+    instructorSelect.innerHTML = '<option value="">Select Instructor for <?= htmlspecialchars($course) ?></option>';
+    
+    let filteredTeachers = allTeachers;
+    
+    if (yearLevel && section) {
+        filteredTeachers = allTeachers.filter(teacher => {
+            const teacherYears = teacher.year_levels.split(',').map(y => y.trim());
+            const teacherSections = teacher.sections.split(',').map(s => s.trim().toUpperCase());
+            return teacherYears.includes(yearLevel) && teacherSections.includes(section);
+        });
+    }
+    
+    // Add filtered options
+    filteredTeachers.forEach(teacher => {
+        const option = document.createElement('option');
+        option.value = teacher.teacher_id;
+        option.textContent = `${teacher.full_name} (${teacher.teacher_id})`;
+        instructorSelect.appendChild(option);
+    });
+    
+    // Show/hide message
+    if (yearLevel && section && filteredTeachers.length === 0) {
+        const noMatchOption = document.createElement('option');
+        noMatchOption.value = '';
+        noMatchOption.textContent = 'No instructors assigned to this year/section';
+        noMatchOption.disabled = true;
+        instructorSelect.appendChild(noMatchOption);
+    }
+}
+
+// Event listeners
+document.getElementById('year_level').addEventListener('change', filterInstructors);
+document.getElementById('section').addEventListener('input', filterInstructors);
+</script>
 
 </body>
 </html>

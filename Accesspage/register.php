@@ -171,7 +171,8 @@ $insertStmt->bind_param(
                 <option value="Sr.">Sr.</option>
                 </select>
                 
-                <input type="date" name="dob" placeholder="Date of Birth" title="Enter your date of birth" required>
+                <label for="dob">Date of Birth</label>
+<input type="date" name="dob" placeholder="Date of Birth" title="Enter your date of birth" required onchange="calculateAge(this)">
                 <input type="number" name="age" placeholder="Age" required>
 
                 
@@ -408,9 +409,25 @@ function togglePassword(fieldId, icon) {
         icon.classList.add("fa-eye");
     }
 }
+
+function calculateAge(dobInput) {
+    const dob = new Date(dobInput.value);
+    if (isNaN(dob.getTime())) return;
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age--;
+    }
+    const ageField = dobInput.parentNode.querySelector('input[name="age"]');
+    if (ageField) {
+        ageField.value = Math.max(0, age);
+    }
+}
 </script>
 
 <div class="right-panel">
+
 <h1>
 Welcome to<br>
 Student<br>

@@ -163,9 +163,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
                     <input type="text" name="suffix" value="<?php echo htmlspecialchars($student['suffix']); ?>" placeholder="Suffix">
                 </div>
                 <div class="form-row">
-                    <input type="date" name="dob" value="<?php echo htmlspecialchars($student['dob']); ?>" required>
+                    <label for="dob">Date of Birth</label>
+                    <input type="date" name="dob" value="<?php echo htmlspecialchars($student['dob']); ?>" required onchange="calculateAge(this)">
+</xai:function_call > 
+
+<xai:function_call name="edit_file">
+<parameter name="path">TODO.md
                     <input type="number" name="age" value="<?php echo htmlspecialchars($student['age']); ?>" placeholder="Age *" required>
                 </div>
+
                 <div class="form-row">
                     <input type="text" name="place_of_birth" value="<?php echo htmlspecialchars($student['place_of_birth']); ?>" placeholder="Place of Birth">
                     <select name="gender" required>
@@ -324,8 +330,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
 </div>
 
 <script>
+function calculateAge(dobInput) {
+    const dob = new Date(dobInput.value);
+    if (isNaN(dob.getTime())) return;
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age--;
+    }
+    const ageField = dobInput.parentNode.querySelector('input[name="age"]');
+    if (ageField) {
+        ageField.value = Math.max(0, age);
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     const deleteModal = document.getElementById('deleteModal');
+
     const showDeleteModalBtn = document.getElementById('showDeleteModal');
     const closeDeleteModalBtn = document.querySelector('.close-delete-modal');
     const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');

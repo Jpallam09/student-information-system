@@ -338,7 +338,11 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])){
                 </select>
                 
                 <!-- DOB with hint -->
-                <input type="date" name="dob" value="<?= htmlspecialchars($student['dob'] ?? '') ?>" placeholder="Date of Birth" title="Enter your date of birth (YYYY-MM-DD)" required>
+                <input type="date" name="dob" value="<?= htmlspecialchars($student['dob'] ?? '') ?>" placeholder="Date of Birth" title="Enter your date of birth (YYYY-MM-DD)" required onchange="calculateAge(this)">
+</xai:function_call >
+
+<xai:function_call name="edit_file">
+<parameter name="path">
 
                 <input type="number" name="age" value="<?= htmlspecialchars($student['age'] ?? '') ?>" placeholder="Age" min="1" max="120" required>
 
@@ -510,9 +514,25 @@ function formatAddress(input) {
 
     input.value = parts.join(', ');
 }
+
+function calculateAge(dobInput) {
+    const dob = new Date(dobInput.value);
+    if (isNaN(dob.getTime())) return;
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age--;
+    }
+    const ageField = dobInput.parentNode.querySelector('input[name="age"]');
+    if (ageField) {
+        ageField.value = Math.max(0, age);
+    }
+}
 </script>
 
 <script>
+
 // Improved Modal JS
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('editProfileModal');
