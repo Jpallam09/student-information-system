@@ -98,9 +98,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])){
             $student = mysqli_fetch_assoc($result);
         }
 
-        // Keep redirect if you want page refresh
-        // header("Location: students_profile.php?id=$student_id");
-        // exit();
+header("Location: students_profile.php?id=$student_id");
+exit();
     } else {
         echo "Error: " . mysqli_error($conn);
     }
@@ -115,26 +114,17 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])){
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-<?php if(isset($_SESSION['profile_updated']) && $_SESSION['profile_updated']): ?>
-    <div class="notification success" id="profileNotification">
-        PROFILE UPDATED
-    </div>
-    <?php unset($_SESSION['profile_updated']); ?>
 
-    <script>
-        // Auto-hide the notification after 3 seconds
-        setTimeout(() => {
-            const notification = document.getElementById('profileNotification');
-            if(notification){
-                notification.style.transition = 'opacity 0.5s';
-                notification.style.opacity = '0';
-                setTimeout(() => notification.remove(), 500); // Remove from DOM
-            }
-        }, 3000);
-    </script>
-<?php endif; ?>
 
 <?php include 'students_sidebar.php'; ?>
+
+<?php if(isset($_SESSION['profile_updated']) && $_SESSION['profile_updated']): ?>
+    <div class="notification success notification-success" id="profileNotification" style="display: flex;">
+        <i class="fas fa-check-circle"></i> PROFILE UPDATED SUCCESSFULLY!
+    </div>
+    <?php unset($_SESSION['profile_updated']); ?>
+<?php endif; ?>
+
 
 <div class="main-content">
     <div class="page-header">
@@ -535,6 +525,20 @@ function calculateAge(dobInput) {
 
 // Improved Modal JS
 document.addEventListener('DOMContentLoaded', function() {
+    // Auto-show and hide profile update notification
+    const profileNotification = document.getElementById('profileNotification');
+    if (profileNotification) {
+        profileNotification.style.opacity = '1';
+        // Auto-hide after 5 seconds with fade
+        setTimeout(() => {
+            profileNotification.style.transition = 'opacity 0.5s ease';
+            profileNotification.style.opacity = '0';
+            setTimeout(() => {
+                profileNotification.style.display = 'none';
+            }, 500);
+        }, 5000);
+    }
+
     const modal = document.getElementById('editProfileModal');
     const openBtn = document.getElementById('openProfileModal');
     const closeBtn = document.getElementById('closeProfileModal');
@@ -580,21 +584,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Notification
-<?php if(isset($_SESSION['profile_updated']) && $_SESSION['profile_updated']): ?>
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function(){
-        const notification = document.getElementById('profileNotification');
-        if(notification) { 
-            notification.style.display = 'flex'; 
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 3000);
-        }
-    }, 100);
-});
-<?php unset($_SESSION['profile_updated']); ?>
-<?php endif; ?>
 </script>
 </body>
 </html>
