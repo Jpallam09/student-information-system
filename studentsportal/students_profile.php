@@ -24,6 +24,64 @@ if(mysqli_num_rows($result) == 0){
 
 $student = mysqli_fetch_assoc($result);
 
+// ✅ Handle profile picture upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile_picture']) && isset($_FILES['profile_picture'])) {
+    $uploadDir = '../profile_pics/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    $maxSize = 2 * 1024 * 1024; // 2MB
+    
+    $file = $_FILES['profile_picture'];
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $_SESSION['upload_error'] = 'Upload error occurred.';
+        header("Location: students_profile.php?id=$student_id");
+        exit();
+    }
+    
+    $fileTmpName = $file['tmp_name'];
+    $fileSize = $file['size'];
+    $fileType = $file['type'];
+    $fileName = $file['name'];
+    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+    
+    $studentIdStr = $student['student_id'] ?? 'student' . $student_id;
+    
+    if (!in_array($fileType, $allowedTypes) || !in_array($fileExt, ['jpg', 'jpeg', 'png'])) {
+        $_SESSION['upload_error'] = 'Invalid file type. Only JPG/PNG allowed.';
+        header("Location: students_profile.php?id=$student_id");
+        exit();
+    }
+    
+    if ($fileSize > $maxSize) {
+        $_SESSION['upload_error'] = 'File too large. Max 2MB.';
+        header("Location: students_profile.php?id=$student_id");
+        exit();
+    }
+    
+    $newFileName = $studentIdStr . '_' . time() . '.' . $fileExt;
+    $uploadPath = $uploadDir . $newFileName;
+    
+    if (move_uploaded_file($fileTmpName, $uploadPath)) {
+        // Update DB profile_picture column (primary), fallback profile_image
+        $updateSql = "UPDATE students SET profile_picture = ?, profile_image = ? WHERE id = ?";
+        $stmt = mysqli_prepare($conn, $updateSql);
+        mysqli_stmt_bind_param($stmt, "ssi", $newFileName, $newFileName, $student_id);
+        if (mysqli_stmt_execute($stmt)) {
+            $_SESSION['profile_pic_updated'] = true;
+        } else {
+            $_SESSION['upload_error'] = 'DB update failed.';
+            unlink($uploadPath); // cleanup
+        }
+    } else {
+        $_SESSION['upload_error'] = 'Failed to upload file.';
+    }
+    
+    header("Location: students_profile.php?id=$student_id");
+    exit();
+}
+
 // ✅ Handle profile update
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])){
     $first_name = mysqli_real_escape_string($conn,$_POST['first_name'] ?? '');
@@ -118,11 +176,25 @@ exit();
 
 <?php include 'students_sidebar.php'; ?>
 
-<?php if(isset($_SESSION['profile_updated']) && $_SESSION['profile_updated']): ?>
-    <div class="notification success notification-success" id="profileNotification" style="display: flex;">
+    <?php if(isset($_SESSION['profile_updated']) && $_SESSION['profile_updated']): ?>
+    <div class="notification success notification-success" id="profileNotification">
         <i class="fas fa-check-circle"></i> PROFILE UPDATED SUCCESSFULLY!
     </div>
     <?php unset($_SESSION['profile_updated']); ?>
+<?php endif; ?>
+
+    <?php if(isset($_SESSION['profile_pic_updated']) && $_SESSION['profile_pic_updated']): ?>
+    <div class="notification success notification-success" id="picNotification">
+        <i class="fas fa-check-circle"></i> PROFILE PICTURE UPDATED SUCCESSFULLY!
+    </div>
+    <?php unset($_SESSION['profile_pic_updated']); ?>
+<?php endif; ?>
+
+    <?php if(isset($_SESSION['upload_error'])): ?>
+    <div class="notification error" id="errorNotification" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
+        <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($_SESSION['upload_error']) ?>
+    </div>
+    <?php unset($_SESSION['upload_error']); ?>
 <?php endif; ?>
 
 
@@ -135,7 +207,13 @@ exit();
     <div class="profile-grid">
         <div class="profile-card">
             <div class="profile-avatar">
-                <img src="../images/default-profile.png" alt="Profile Picture">
+                <?php 
+                $profilePic = $student['profile_picture'] ?? null;
+                $defaultPic = '../images/default-profile.png';
+                $uploadedPic = $profilePic ? '../profile_pics/' . basename($profilePic) : '';
+                $picSrc = ( $profilePic && file_exists($uploadedPic) ) ? $uploadedPic : $defaultPic;
+                ?>
+                <img src="<?= htmlspecialchars($picSrc) ?>" alt="Profile Picture" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
             </div>
             <h3 class="profile-name"><?= htmlspecialchars($student['first_name'].' '.$student['last_name']) ?></h3>
             <p class="profile-role"><?= htmlspecialchars(($student['course'] ?? '').' - '.($student['year_level'] ?? '').'') ?></p>
@@ -146,7 +224,14 @@ exit();
                 <p><i class="fas fa-phone"></i> <?= htmlspecialchars($student['mobile'] ?? '') ?></p>
             </div>
 
-            <button class="btn-primary" id="openProfileModal"><i class="fas fa-edit"></i> Edit Profile</button>
+<button class="btn-primary" onclick="document.getElementById('editProfileModal').style.display='flex'"><i class="fas fa-edit"></i> Edit Profile</button>
+            
+            <!-- Profile Picture Upload Section -->
+            <div style="margin-top: 20px;">
+<button onclick="document.getElementById('picUploadModal').style.display='flex'" class="btn-secondary" style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); border: none;">
+                    <i class="fas fa-camera"></i> Change Profile Picture
+                </button>
+            </div>
         </div>
 
         <div class="profile-details">
@@ -288,9 +373,9 @@ exit();
         </div>
 
     <!-- EDIT PROFILE MODAL -->
-<div id="editProfileModal" class="modal">
+<div id="editProfileModal" class="modal" style="display:none;position:fixed;z-index:1000;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);">
     <div class="modal-content">
-        <span class="close-modal">&times;</span>
+<span class="close-modal" onclick="this.parentElement.parentElement.style.display='none';document.body.style.overflow=''" style="cursor:pointer;font-size:28px;font-weight:bold;position:absolute;right:20px;top:15px;color:#aaa;">&times;</span>
         <h2 class="modal-title"><i class="fas fa-user-edit"></i> Edit Profile</h2>
         <form method="POST" class="edit-profile-form">
 
@@ -487,14 +572,47 @@ exit();
 
             <div class="form-buttons">
                 <button type="submit" name="update_profile" class="btn-primary"><i class="fas fa-save"></i> Update</button>
-                <button type="button" class="btn-secondary" id="closeProfileModal">Cancel</button>
+<button type="button" class="btn-secondary" onclick="document.getElementById('editProfileModal').style.display='none';document.body.style.overflow=''" style="cursor:pointer;">Cancel</button>
             </div>
         </form>
     </div>
 </div>
 
+    <!-- Profile Picture Upload Modal -->
+    <div id="picUploadModal" class="modal">
+        <div class="modal-content">
+<span class="close-modal" onclick="this.parentElement.parentElement.style.display='none';document.body.style.overflow=''" style="cursor:pointer;font-size:28px;font-weight:bold;position:absolute;right:20px;top:15px;color:#aaa;">&times;</span>
+            <h2 class="modal-title"><i class="fas fa-camera"></i> Upload Profile Picture</h2>
+            <form method="POST" enctype="multipart/form-data">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <?php 
+                    $profilePic = $student['profile_picture'] ?? null;
+                    $defaultPic = '../images/default-profile.png';
+                    $uploadedPic = $profilePic ? '../profile_pics/' . basename($profilePic) : '';
+                    $currentPicSrc = ( $profilePic && file_exists($uploadedPic) ) ? $uploadedPic : $defaultPic;
+                    ?>
+                    <img id="currentPicPreview" src="<?= htmlspecialchars($currentPicSrc) ?>" alt="Current Profile Picture" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #10B981;">
+                </div>
+                <input type="file" name="profile_picture" id="profilePicInput" accept="image/jpeg,image/jpg,image/png" required style="width: 100%; padding: 10px; border: 2px dashed #10B981; border-radius: 8px; margin-bottom: 15px;">
+                <div id="picPreviewContainer" style="display: none; text-align: center; margin: 15px 0;">
+                    <img id="picPreview" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #3B82F6;">
+                    <p id="previewFileName" style="margin-top: 10px; font-size: 14px; color: #6B7280;"></p>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" name="update_profile_picture" class="btn-primary">
+                        <i class="fas fa-upload"></i> Upload Picture
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('picUploadModal').style.display='none';document.body.style.overflow='';document.getElementById('profilePicInput').value='';document.getElementById('picPreviewContainer').style.display='none'" style="cursor:pointer;">Cancel</button>
+</xai:function_call >  
+<xai:function_call name="edit_file">
+                </div>
+            </form>
+        </div>
+    </div>
+
 <script>
 function formatAddress(input) {
+
     let parts = input.value.split(',');
 
     parts = parts.map(part => {
@@ -522,68 +640,97 @@ function calculateAge(dobInput) {
 </script>
 
 <script>
-
-// Improved Modal JS
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-show and hide profile update notification
-    const profileNotification = document.getElementById('profileNotification');
-    if (profileNotification) {
-        profileNotification.style.opacity = '1';
-        // Auto-hide after 5 seconds with fade
-        setTimeout(() => {
-            profileNotification.style.transition = 'opacity 0.5s ease';
-            profileNotification.style.opacity = '0';
+    // Auto-hide notifications - Robust version
+    ['profileNotification', 'picNotification', 'errorNotification'].forEach(id => {
+        const n = document.getElementById(id);
+        if (n && n.style.display !== 'none') {
+            // Force styles for reliable fade
+            n.style.transition = 'opacity 0.5s ease-out';
+            n.style.opacity = '0';
+            // Show with fade in
             setTimeout(() => {
-                profileNotification.style.display = 'none';
-            }, 500);
-        }, 5000);
-    }
-
-    const modal = document.getElementById('editProfileModal');
-    const openBtn = document.getElementById('openProfileModal');
-    const closeBtn = document.getElementById('closeProfileModal');
-    const closeIcon = document.querySelector('#editProfileModal .close-modal');
-
-    if (!modal || !openBtn) return; // Exit if elements don't exist
-
-    function openModal() { 
-        modal.classList.add('show'); 
-        modal.style.display = 'flex'; 
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
-    }
-    
-    function closeModal() { 
-        modal.classList.remove('show'); 
-        modal.style.display = 'none'; 
-        document.body.style.overflow = ''; // Restore scrolling
-    }
-
-    openBtn.addEventListener('click', openModal);
-    
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (closeIcon) closeIcon.addEventListener('click', closeModal);
-    
-    // Close when clicking outside modal
-    modal.addEventListener('click', function(e) { 
-        if(e.target === modal) closeModal(); 
-    });
-    
-    // Close on Escape key
-    document.addEventListener('keydown', function(e) { 
-        if(e.key === 'Escape' && modal.classList.contains('show')) {
-            closeModal(); 
+                n.style.opacity = '1';
+            }, 100);
+            
+            // Fade out after 5 seconds
+            setTimeout(() => {
+                n.style.opacity = '0';
+                setTimeout(() => {
+                    n.style.display = 'none';
+                }, 500);
+            }, 5100);
         }
     });
 
-    // Prevent modal from closing when clicking inside modal content
-    const modalContent = modal.querySelector('.modal-content');
-    if (modalContent) {
-        modalContent.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
+    // Edit Profile Modal
+    const editModal = document.getElementById('editProfileModal');
+    const openEditBtn = document.getElementById('openProfileModal');
+    if (editModal && openEditBtn) {
+        const openEdit = () => {
+            editModal.style.display = 'flex';
+            editModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        };
+        const closeEdit = () => {
+            editModal.classList.remove('show');
+            editModal.style.display = 'none';
+            document.body.style.overflow = '';
+        };
+        openEditBtn.onclick = openEdit;
+        document.querySelector('#editProfileModal .close-modal').onclick = closeEdit;
+        document.getElementById('closeProfileModal')?.onclick = closeEdit;
+        editModal.onclick = e => e.target === editModal && closeEdit();
     }
-});
 
+    // Pic Upload Modal
+    const picModal = document.getElementById('picUploadModal');
+    const openPicBtn = document.getElementById('openPicUploadModal');
+    if (picModal && openPicBtn) {
+        const picInput = document.getElementById('profilePicInput');
+        const openPic = () => {
+            picModal.style.display = 'flex';
+            picModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        };
+        const closePic = () => {
+            picModal.classList.remove('show');
+            picModal.style.display = 'none';
+            document.body.style.overflow = '';
+            picInput.value = '';
+            document.getElementById('picPreviewContainer').style.display = 'none';
+        };
+        openPicBtn.onclick = openPic;
+        document.querySelector('#picUploadModal .close-modal').onclick = closePic;
+        picModal.onclick = e => e.target === picModal && closePic();
+
+        // Preview
+        picInput.onchange = e => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    document.getElementById('picPreview').src = ev.target.result;
+                    document.getElementById('picPreviewContainer').style.display = 'block';
+                    document.getElementById('previewFileName').textContent = file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+    }
+
+    // ESC key
+    document.onkeydown = e => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal.show').forEach(m => {
+                m.classList.remove('show');
+                m.style.display = 'none';
+                document.body.style.overflow = '';
+            });
+        }
+    };
+});
 </script>
+
 </body>
 </html>
