@@ -176,26 +176,28 @@ exit();
 
 <?php include 'students_sidebar.php'; ?>
 
+<div id="notification-container">
     <?php if(isset($_SESSION['profile_updated']) && $_SESSION['profile_updated']): ?>
-    <div class="notification success notification-success" id="profileNotification">
+    <div class="notification notification-success auto-fade">
         <i class="fas fa-check-circle"></i> PROFILE UPDATED SUCCESSFULLY!
     </div>
     <?php unset($_SESSION['profile_updated']); ?>
-<?php endif; ?>
+    <?php endif; ?>
 
     <?php if(isset($_SESSION['profile_pic_updated']) && $_SESSION['profile_pic_updated']): ?>
-    <div class="notification success notification-success" id="picNotification">
+    <div class="notification notification-success auto-fade">
         <i class="fas fa-check-circle"></i> PROFILE PICTURE UPDATED SUCCESSFULLY!
     </div>
     <?php unset($_SESSION['profile_pic_updated']); ?>
-<?php endif; ?>
+    <?php endif; ?>
 
     <?php if(isset($_SESSION['upload_error'])): ?>
-    <div class="notification error" id="errorNotification" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
+    <div class="notification notification-error auto-fade">
         <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($_SESSION['upload_error']) ?>
     </div>
     <?php unset($_SESSION['upload_error']); ?>
-<?php endif; ?>
+    <?php endif; ?>
+</div>
 
 
 <div class="main-content">
@@ -224,11 +226,11 @@ exit();
                 <p><i class="fas fa-phone"></i> <?= htmlspecialchars($student['mobile'] ?? '') ?></p>
             </div>
 
-<button class="btn-primary" onclick="document.getElementById('editProfileModal').style.display='flex'"><i class="fas fa-edit"></i> Edit Profile</button>
+<button class="btn-primary" onclick="document.getElementById('editProfileModal').style.display='flex'"><i class="fas fa-pencil"></i> Edit Profile</button>
             
             <!-- Profile Picture Upload Section -->
             <div style="margin-top: 20px;">
-<button onclick="document.getElementById('picUploadModal').style.display='flex'" class="btn-secondary" style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); border: none;">
+<button onclick="document.getElementById('picUploadModal').style.display='flex'" class="btn-secondary profile-pic-btn" style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); border: none; color: white;">
                     <i class="fas fa-camera"></i> Change Profile Picture
                 </button>
             </div>
@@ -373,7 +375,7 @@ exit();
         </div>
 
     <!-- EDIT PROFILE MODAL -->
-<div id="editProfileModal" class="modal" style="display:none;position:fixed;z-index:1000;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);">
+<div id="editProfileModal" class="modal" style="display:none;position:fixed;z-index:1000;top:0;left:0;width:100%;height:100%;background:rgba(26, 23, 23, 0.8);">
     <div class="modal-content">
 <span class="close-modal" onclick="this.parentElement.parentElement.style.display='none';document.body.style.overflow=''" style="cursor:pointer;font-size:28px;font-weight:bold;position:absolute;right:20px;top:15px;color:#aaa;">&times;</span>
         <h2 class="modal-title"><i class="fas fa-user-edit"></i> Edit Profile</h2>
@@ -593,11 +595,7 @@ exit();
                     ?>
                     <img id="currentPicPreview" src="<?= htmlspecialchars($currentPicSrc) ?>" alt="Current Profile Picture" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #10B981;">
                 </div>
-                <input type="file" name="profile_picture" id="profilePicInput" accept="image/jpeg,image/jpg,image/png" required style="width: 100%; padding: 10px; border: 2px dashed #10B981; border-radius: 8px; margin-bottom: 15px;">
-                <div id="picPreviewContainer" style="display: none; text-align: center; margin: 15px 0;">
-                    <img id="picPreview" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #3B82F6;">
-                    <p id="previewFileName" style="margin-top: 10px; font-size: 14px; color: #6B7280;"></p>
-                </div>
+                <input type="file" name="profile_picture" id="profilePicInput" accept="image/jpeg,image/jpg,image/png" required>
                 <div class="form-buttons">
                     <button type="submit" name="update_profile_picture" class="btn-primary">
                         <i class="fas fa-upload"></i> Upload Picture
@@ -641,27 +639,48 @@ function calculateAge(dobInput) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-hide notifications - Robust version
-    ['profileNotification', 'picNotification', 'errorNotification'].forEach(id => {
-        const n = document.getElementById(id);
-        if (n && n.style.display !== 'none') {
-            // Force styles for reliable fade
-            n.style.transition = 'opacity 0.5s ease-out';
+// Auto-hide notifications - FIXED robust version
+    function hideNotifications() {
+        // Select ALL notifications by class (handles any count)
+        const notifications = document.querySelectorAll('.notification-success, .notification.error');
+        let currentTop = 24; // Start position (px)
+        
+        notifications.forEach((n, index) => {
+            // Force explicit styles for reliability
+            n.style.position = 'relative';
+            n.style.display = 'flex';
             n.style.opacity = '0';
-            // Show with fade in
-            setTimeout(() => {
-                n.style.opacity = '1';
-            }, 100);
+            n.style.transition = 'opacity 0.5s ease-out, transform 0.5s ease-out';
+            n.style.transform = 'translateX(20px)';
             
-            // Fade out after 5 seconds
-            setTimeout(() => {
+            // Calculate position for stacking
+            const topPos = currentTop + (index * 80); // 80px per notification
+            n.style.top = topPos + 'px';
+            n.style.right = '24px';
+            
+            // Smooth fade-in
+            requestAnimationFrame(() => {
+                n.style.opacity = '1';
+                n.style.transform = 'translateX(0)';
+            });
+            
+            // Fade out exactly after 5 seconds, then hide
+            const fadeTimeout = setTimeout(() => {
                 n.style.opacity = '0';
-                setTimeout(() => {
+                n.style.transform = 'translateX(20px)';
+                clearTimeout(fadeTimeout);
+                
+                const hideTimeout = setTimeout(() => {
                     n.style.display = 'none';
+                    clearTimeout(hideTimeout);
                 }, 500);
-            }, 5100);
-        }
-    });
+            }, 5000);
+        });
+    }
+    
+    // Run on load
+// Notification JS disabled - using CSS-only auto-fade now
+// hideNotifications();
 
     // Edit Profile Modal
     const editModal = document.getElementById('editProfileModal');

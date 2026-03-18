@@ -183,6 +183,15 @@ while($student = mysqli_fetch_assoc($student_query)){
 }
 usort($ranking_students, function($a,$b){ return $a['gpa'] <=> $b['gpa']; });
 
+// ================== FETCH TEACHER FULL NAME ==================
+$teacher_query = mysqli_query($conn, "
+    SELECT CONCAT(first_name, ' ', IFNULL(middle_name, ''), ' ', last_name, ' ', IFNULL(suffix, '')) AS full_name
+    FROM teachers 
+    WHERE id = " . intval($_SESSION['teacher_id']) . "
+");
+$teacher_row = mysqli_fetch_assoc($teacher_query);
+$teacher_full_name = trim($teacher_row['full_name'] ?? ($_SESSION['teacher_name'] ?? 'User'));
+
 // ================== FETCH ATTENDANCE DATA FOR MODAL ==================
 // Senior-level: Get all students with their attendance records for the modal view
 $attendance_students_query = mysqli_query($conn, "
@@ -226,7 +235,7 @@ while($row = mysqli_fetch_assoc($attendance_students_query)){
     <?php if (isset($_SESSION['teacher_type']) && $_SESSION['teacher_type'] === 'Administrator'): ?>
     <p style="margin-top: -10px; margin-bottom: 20px;">Welcome, <strong>System Administrator</strong></p>
     <?php else: ?>
-    <p style="margin-top: -10px; margin-bottom: 20px;">Welcome, Teacher <strong><?= htmlspecialchars($_SESSION['teacher_name'] ?? 'User') ?></strong></p>
+    <p style="margin-top: -10px; margin-bottom: 20px;">Welcome, Teacher <strong><?= htmlspecialchars($teacher_full_name) ?></strong></p>
     <?php endif; ?>
 
     <div class="cards">

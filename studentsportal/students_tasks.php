@@ -253,12 +253,12 @@ if (!empty($current_task_ids)) {
                         <div class="task-meta">
                             <span class="task-date"><i class="fas fa-calendar"></i> Posted: <?php echo date('M j, Y', strtotime($task['created_at'])); ?></span>
                             <div class="task-actions">
-                                <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View</button>
+                                <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View Task from Teacher</button>
                                 <?php if($task['is_submitted']): ?>
                                     <button class="btn-task btn-submitted" onclick="viewMySubmission(<?php echo $task['id']; ?>)" style="background: var(--accent-emerald); color: white;"><i class="fas fa-check"></i> View Submission</button>
                                     <button class="btn-task btn-delete-submission" onclick="quickDeleteSubmission(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>')" style="background: #ef4444; color: white;" title="Delete Submission"><i class="fas fa-trash"></i></button>
                                 <?php else: ?>
-                                    <button class="btn-task btn-submit" onclick="openSubmitModal(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>', '<?php echo htmlspecialchars($task['subject_name']); ?>')"><i class="fas fa-upload"></i> Submit</button>
+                                    <button class="btn-task btn-submit" onclick="openSubmitModal(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>', '<?php echo htmlspecialchars($task['subject_name']); ?>')"><i class="fas fa-upload"></i> Submit Task to Teacher</button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -783,7 +783,7 @@ document.getElementById('submitTaskForm').addEventListener('submit', function(e)
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Task submitted successfully!');
+showStudentNotification('Your task has been submitted successfully! ✅');
             closeSubmitModal();
             location.reload();
         } else {
@@ -986,7 +986,7 @@ function confirmDeleteSubmission() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Submission deleted successfully!');
+            showStudentNotification('Submission deleted successfully!');
             closeDeleteSubmissionModal();
             location.reload();
         } else {

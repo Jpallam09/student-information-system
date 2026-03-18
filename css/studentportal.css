@@ -914,6 +914,66 @@ button i, .btn i {
     border-color: var(--slate-500);
 }
 
+.profile-pic-btn, .profile-pic-btn * {
+    color: white !important;
+}
+
+.profile-pic-btn:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-2px);
+}
+
+/* Profile Picture Upload Modal Enhanced Styling */
+#picUploadModal .modal-content {
+    max-width: 500px;
+}
+
+#profilePicInput {
+    border: 2px dashed var(--accent-emerald) !important;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(34, 197, 94, 0.05));
+    transition: all var(--transition-base);
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#profilePicInput:hover {
+    border-color: #059669 !important;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(34, 197, 94, 0.1));
+    transform: scale(1.02);
+}
+
+#profilePicInput:focus {
+    border-color: var(--primary-blue) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    background: white;
+}
+
+#picPreviewContainer {
+    background: linear-gradient(135deg, var(--slate-50), var(--slate-100));
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--primary-blue);
+}
+
+#picPreview {
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-base);
+}
+
+#picPreviewContainer:hover #picPreview {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-lg);
+}
+
+#previewFileName {
+    color: var(--slate-600);
+    font-weight: 500;
+    background: var(--slate-200);
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    margin-top: 12px;
+}
+
 /* REFRESH BUTTON */
 .refresh-btn {
     display: inline-flex;
@@ -1676,6 +1736,59 @@ button[type="submit"]:hover,
     box-shadow: var(--shadow-xl);
 }
 
+/* REALISTIC 3D BUTTONS - Profile Card */
+.profile-card .btn-primary,
+.profile-pic-btn {
+    position: relative;
+    background: linear-gradient(145deg, #2563eb, #1d4ed8);
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 14px 28px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: none;
+    box-shadow: 
+        0 4px 15px rgba(37, 99, 235, 0.4),
+        0 2px 4px rgba(0,0,0,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.profile-card .btn-primary::before,
+.profile-pic-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.6s;
+}
+
+.profile-card .btn-primary:hover::before,
+.profile-pic-btn:hover::before {
+    left: 100%;
+}
+
+.profile-card .btn-primary:hover,
+.profile-pic-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+        0 8px 25px rgba(37, 99, 235, 0.5),
+        0 4px 8px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.profile-card .btn-primary:active,
+.profile-pic-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 
+        0 2px 8px rgba(37, 99, 235, 0.3),
+        0 1px 2px rgba(0,0,0,0.2);
+}
+
 .profile-avatar {
     text-align: center;
     margin-bottom: 20px;
@@ -1887,22 +2000,66 @@ button[type="submit"]:hover,
 /* =========================
    NOTIFICATIONS
 ========================= */
-.notification {
+#notification-container {
     position: fixed;
     top: 24px;
     right: 24px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 380px;
+    animation: notificationSlide 0.3s ease;
+}
+
+.notification {
     padding: 14px 24px;
     border-radius: var(--radius-md);
     color: white;
     font-weight: 500;
     box-shadow: var(--shadow-xl);
-    z-index: 10000;
-    animation: notificationSlide 0.3s ease;
-    max-width: 380px;
     display: flex;
     align-items: center;
     gap: 12px;
+    min-height: 56px;
+    animation: notificationSlide 0.3s ease;
     border: none;
+}
+
+.notification i {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.auto-fade {
+    animation: autoFade 5.5s ease forwards;
+}
+
+@keyframes autoFade {
+    0% {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    10% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    85% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
+.notification-success {
+    background: linear-gradient(135deg, var(--accent-emerald), #059669);
+}
+
+.notification-error {
+    background: linear-gradient(135deg, var(--accent-rose), #dc2626);
 }
 
 .notification i {
