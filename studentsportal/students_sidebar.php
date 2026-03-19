@@ -26,6 +26,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <div class="sidebar-header">
             <img src="../images/622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 80px; display: block; margin: 40px auto 15px auto;border-radius: 5px; animation: float 3s ease-in-out infinite;">
 <h2 style="margin-top: 5px;"><i class="fas fa-graduation-cap"></i>Student's Portal</h2>
+<p class="sidebar-sub"><?php include_once '../config/current_school_year.php'; echo getActiveSchoolYear($conn) ?? 'Academic Year Not Set'; ?> - <?php echo getActiveSemester($conn) ?? ''; ?></p>
 
         </div>
 

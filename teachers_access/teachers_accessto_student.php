@@ -1,6 +1,9 @@
 <?php
 session_start();
 include '../config/database.php';
+include_once '../config/current_school_year.php';
+$active_year = getActiveSchoolYear($conn) ?? '';
+$active_sem = getActiveSemester($conn) ?? '';
 
 if (!isset($_SESSION['teacher_id'])) {
     header("Location: ../Accesspage/teacher_login.php");
@@ -231,13 +234,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
                         <option value="C" <?php echo ($student['section'] == 'C') ? 'selected' : ''; ?>>C</option>
                         <option value="D" <?php echo ($student['section'] == 'D') ? 'selected' : ''; ?>>D</option>
                     </select>
-                    <input type="text" name="school_year" value="<?php echo htmlspecialchars($student['school_year']); ?>" placeholder="School Year *">
+                    <input type="text" name="school_year" value="<?php echo htmlspecialchars($student['school_year'] ?? $active_year); ?>" placeholder="School Year * (Active: <?= htmlspecialchars($active_year) ?>)" title="Active year auto-suggested">
                 </div>
                 <div class="form-row">
                     <select name="semester" required>
-                        <option value="">Semester *</option>
-                        <option value="1st" <?php echo ($student['semester'] == '1st') ? 'selected' : ''; ?>>1st SEM</option>
-                        <option value="2nd" <?php echo ($student['semester'] == '2nd') ? 'selected' : ''; ?>>2nd SEM</option>
+                        <option value="1st" <?= (($student['semester'] ?? $active_sem) == '1st') ? 'selected' : '' ?> <?= ($active_sem == '1st') ? '(Active)' : '' ?>>1st SEM</option>
+                        <option value="2nd" <?= (($student['semester'] ?? $active_sem) == '2nd') ? 'selected' : '' ?> <?= ($active_sem == '2nd') ? '(Active)' : '' ?>>2nd SEM</option>
                     </select>
                     <select name="status" required>
                         <option value="">Status *</option>
@@ -280,7 +282,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
                     <input type="text" name="guardian_name" value="<?php echo htmlspecialchars($student['guardian_name']); ?>" placeholder="Guardian Name"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
                     <input type="text" name="parent_contact" value="<?php echo htmlspecialchars($student['parent_contact']); ?>" placeholder="Mobile Number (11-digit Philippine number, e.g., 09171234567)" maxlength="11" pattern="\d{11}" required oninput="this.value = this.value.replace(/[^0-9]/g,'');">
                 </div>
-                <div class="form-row">
+                <div c
+                lass="form-row">
                     <input type="text" name="parent_occupation" value="<?php echo htmlspecialchars($student['parent_occupation']); ?>" placeholder="Parent Occupation"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
                     <input type="text" name="parent_employer" value="<?php echo htmlspecialchars($student['parent_employer']); ?>" placeholder="Parent Employer"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
                 </div>

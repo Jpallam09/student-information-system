@@ -7,6 +7,9 @@
 
 session_start();
 require_once '../config/database.php';
+include_once '../config/current_school_year.php';
+$active_year = getActiveSchoolYear($conn) ?? '';
+$active_sem = getActiveSemester($conn) ?? '';
 
 $from = isset($_GET['from']) ? $_GET['from'] : 'student';
 
@@ -256,12 +259,10 @@ oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g,'').replace(/\b\w/g,c =>
 <option value="D">D</option>
 </select>
 
-<input type="text" name="school_year" placeholder="School Year (e.g., 2025-2026)" pattern="\d{4}-\d{4}" title="Format: 4 digits, dash, 4 digits (e.g., 2025-2026)" maxlength="9" required>
+<input type="text" name="school_year" value="<?= htmlspecialchars($active_year) ?>" placeholder="Auto-filled: <?= htmlspecialchars($active_year) ?>" pattern="\d{4}-\d{4}" title="Active School Year from Admin" maxlength="9" readonly required>
 
-<select name="semester" required>
-<option value="">Select Semester</option>
-<option value="1st">1st SEM</option>
-<option value="2nd">2nd SEM</option>
+<select name="semester" disabled required>
+<option value="<?= htmlspecialchars($active_sem) ?>" selected><?= htmlspecialchars($active_sem) ?> SEM (Active)</option>
 </select>
 
 <select name="status" required>

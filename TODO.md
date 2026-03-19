@@ -1,12 +1,13 @@
-# Task Progress: Styling admin/manage_school_year.php to match teacherportal.css
+# Automatic School Year/Semester Population Implementation
+## Status: [IMPLEMENTING STEP 2]
 
-## Plan Steps
-- [x] **Step 1**: Create TODO.md with approved plan breakdown
-- [x] **Step 2**: Edit admin/manage_school_year.php - remove inline styles, update classes for full teacherportal.css match
-- [x] **Step 3**: Test in browser, verify matching blue/navy theme, responsive design
-- [ ] **Step 4**: Mark complete and attempt_completion
+**Goal:** Auto-populate school_year/semester fields in register.php and teachers_accessto_student.php using active values from manage_school_year.php via current_school_year.php functions.
 
-**Next**: Ready for completion.
+### Planned Steps:
+- [x] **Step 1:** ✅ Accesspage/register.php - Auto-populated + readonly (complete)
+- [x] **Step 2:** ✅ teachers_access/teachers_accessto_student.php - Active year suggested + smart semester select (complete)
+- [ ] **Step 3:** Test forms auto-fill after setting active year in manage_school_year.php
+- [ ] **Step 4:** Update TODO.md with completion status
+- [ ] **Step 5:** Final verification + attempt_completion
 
-**Status**: Starting implementation...
-
+**Current Progress:** Planning complete, ready for implementation.
