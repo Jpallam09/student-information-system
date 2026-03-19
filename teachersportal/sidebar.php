@@ -83,8 +83,8 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
             modal.classList.remove('show');
         }
 
-        function confirmLogout() {
-            window.location.href = 'logout.php';
+function confirmLogout() {
+            window.location.href = '../teachersportal/logout.php';
         }
 
         // Close modal on outside click

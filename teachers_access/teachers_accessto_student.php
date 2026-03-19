@@ -155,11 +155,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
             <fieldset>
                 <legend><i class="fas fa-user"></i> Basic Personal Information</legend>
                 <div class="form-row">
-                    <input type="text" name="first_name" value="<?php echo htmlspecialchars($student['first_name']); ?>" placeholder="First Name *" required>
-                    <input type="text" name="middle_name" value="<?php echo htmlspecialchars($student['middle_name']); ?>" placeholder="Middle Name">
+                    <input type="text" name="first_name" value="<?php echo htmlspecialchars($student['first_name']); ?>" placeholder="First Name *" required oninput="this.value = this.value.toUpperCase()">
+                    <input type="text" name="middle_name" value="<?php echo htmlspecialchars($student['middle_name']); ?>" placeholder="Middle Name" required oninput="this.value = this.value.toUpperCase()">
                 </div>
                 <div class="form-row">
-                    <input type="text" name="last_name" value="<?php echo htmlspecialchars($student['last_name']); ?>" placeholder="Last Name *" required>
+                    <input type="text" name="last_name" value="<?php echo htmlspecialchars($student['last_name']); ?>" placeholder="Last Name *" required oninput="this.value = this.value.toUpperCase()">
                     <input type="text" name="suffix" value="<?php echo htmlspecialchars($student['suffix']); ?>" placeholder="Suffix">
                 </div>
                 <div class="form-row">
@@ -168,12 +168,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
 </xai:function_call > 
 
 <xai:function_call name="edit_file">
-<parameter name="path">TODO.md
+<parameter name="path">
                     <input type="number" name="age" value="<?php echo htmlspecialchars($student['age']); ?>" placeholder="Age *" required>
                 </div>
 
                 <div class="form-row">
-                    <input type="text" name="place_of_birth" value="<?php echo htmlspecialchars($student['place_of_birth']); ?>" placeholder="Place of Birth">
+                    <input type="text" name="place_of_birth" value="<?php echo htmlspecialchars($student['place_of_birth']); ?>" placeholder="Place of Birth" oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
+
                     <select name="gender" required>
                         <option value="">Gender *</option>
                         <option value="Male" <?php echo ($student['gender'] == 'Male') ? 'selected' : ''; ?>>Male</option>
@@ -245,49 +246,50 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
                     </select>
                 </div>
                 <div class="form-row">
-                    <input type="text" name="last_school_attended" value="<?php echo htmlspecialchars($student['last_school_attended']); ?>" placeholder="Last School Attended">
-                    <input type="text" name="last_school_address" value="<?php echo htmlspecialchars($student['last_school_address']); ?>" placeholder="Last School Address">
+                    <input type="text" name="last_school_attended" value="<?php echo htmlspecialchars($student['last_school_attended']); ?>" placeholder="Last School Attended" oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
+
+                    <input type="text" name="last_school_address" value="<?php echo htmlspecialchars($student['last_school_address']); ?>" placeholder="Last School Address" oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
                 </div>
             </fieldset>
 
             <fieldset>
                 <legend><i class="fas fa-address-book"></i> Contact Information</legend>
                 <div class="form-row">
-                    <input type="email" name="email" value="<?php echo htmlspecialchars($student['email']); ?>" placeholder="Email Address *" required>
-                    <input type="text" name="mobile" value="<?php echo htmlspecialchars($student['mobile']); ?>" placeholder="Mobile Number *">
+                    <input type="email" name="email" value="<?php echo htmlspecialchars($student['email']); ?>" placeholder="Email Address (e.g., example@gmail.com)" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" required>
+                    <input type="text" name="mobile" value="<?php echo htmlspecialchars($student['mobile']); ?>" placeholder="Mobile Number (11-digit Philippine number, e.g., 09171234567)" maxlength="11" pattern="\d{11}" required oninput="this.value = this.value.replace(/[^0-9]/g,'');">
                 </div>
                 <div class="form-row">
                     <textarea name="home_address" placeholder="Home Address" required><?php echo htmlspecialchars($student['home_address']); ?></textarea>
                 </div>
                 <div class="form-row">
-                    <input type="text" name="zip_code" value="<?php echo htmlspecialchars($student['zip_code']); ?>" placeholder="Zip Code">
-                    <input type="text" name="emergency_person" value="<?php echo htmlspecialchars($student['emergency_person']); ?>" placeholder="Emergency Contact Person">
+                    <input type="text" name="zip_code" value="<?php echo htmlspecialchars($student['zip_code']); ?>" placeholder="Zip Code (e.g., 3315)" maxlength="4" pattern="\d{4}" required oninput="this.value = this.value.replace(/[^0-9]/g,'');">
+                    <input type="text" name="emergency_person" value="<?php echo htmlspecialchars($student['emergency_person']); ?>" placeholder="Emergency Contact Person"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
                 </div>
                 <div class="form-row">
-                    <input type="text" name="emergency_number" value="<?php echo htmlspecialchars($student['emergency_number']); ?>" placeholder="Emergency Contact Number">
+                    <input type="text" name="emergency_number" value="<?php echo htmlspecialchars($student['emergency_number']); ?>" placeholder="Mobile Number (11-digit Philippine number, e.g., 09171234567)" maxlength="11" pattern="\d{11}" required oninput="this.value = this.value.replace(/[^0-9]/g,'');">
                 </div>
             </fieldset>
 
             <fieldset>
                 <legend><i class="fas fa-users"></i> Parent / Guardian Information</legend>
                 <div class="form-row">
-                    <input type="text" name="father_name" value="<?php echo htmlspecialchars($student['father_name']); ?>" placeholder="Father's Name">
-                    <input type="text" name="mother_name" value="<?php echo htmlspecialchars($student['mother_name']); ?>" placeholder="Mother's Name">
+                    <input type="text" name="father_name" value="<?php echo htmlspecialchars($student['father_name']); ?>" placeholder="Father's Name"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
+                    <input type="text" name="mother_name" value="<?php echo htmlspecialchars($student['mother_name']); ?>" placeholder="Mother's Name"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
                 </div>
                 <div class="form-row">
-                    <input type="text" name="guardian_name" value="<?php echo htmlspecialchars($student['guardian_name']); ?>" placeholder="Guardian Name">
-                    <input type="text" name="parent_contact" value="<?php echo htmlspecialchars($student['parent_contact']); ?>" placeholder="Parent Contact Number">
+                    <input type="text" name="guardian_name" value="<?php echo htmlspecialchars($student['guardian_name']); ?>" placeholder="Guardian Name"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
+                    <input type="text" name="parent_contact" value="<?php echo htmlspecialchars($student['parent_contact']); ?>" placeholder="Mobile Number (11-digit Philippine number, e.g., 09171234567)" maxlength="11" pattern="\d{11}" required oninput="this.value = this.value.replace(/[^0-9]/g,'');">
                 </div>
                 <div class="form-row">
-                    <input type="text" name="parent_occupation" value="<?php echo htmlspecialchars($student['parent_occupation']); ?>" placeholder="Parent Occupation">
-                    <input type="text" name="parent_employer" value="<?php echo htmlspecialchars($student['parent_employer']); ?>" placeholder="Parent Employer">
+                    <input type="text" name="parent_occupation" value="<?php echo htmlspecialchars($student['parent_occupation']); ?>" placeholder="Parent Occupation"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
+                    <input type="text" name="parent_employer" value="<?php echo htmlspecialchars($student['parent_employer']); ?>" placeholder="Parent Employer"oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, function(c){ return c.toUpperCase(); })">
                 </div>
             </fieldset>
 
             <fieldset>
                 <legend><i class="fas fa-heartbeat"></i> Health Information</legend>
                 <div class="form-row">
-                    <input type="text" name="blood_type" value="<?php echo htmlspecialchars($student['blood_type']); ?>" placeholder="Blood Type">
+                    <input type="text" name="blood_type" value="<?php echo htmlspecialchars($student['blood_type']); ?>" placeholder="Blood Type (A+, O-, B+, etc.)"maxlength="3" oninput="this.value = this.value.toUpperCase().replace(/[^ABO+-]/g,'')"
                 </div>
                 <div class="form-row">
                     <textarea name="medical_conditions" placeholder="Medical Conditions"><?php echo htmlspecialchars($student['medical_conditions']); ?></textarea>

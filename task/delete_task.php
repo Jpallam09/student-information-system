@@ -45,7 +45,10 @@ if ($deleteResult) {
         }
     }
     
-    echo json_encode(['success' => true, 'message' => 'Task deleted successfully']);
+    echo json_encode([
+        'success' => true,
+        'message' => 'Task deleted successfully from system'
+    ]);
 } else {
     echo json_encode(['success' => false, 'message' => 'Error deleting task: ' . mysqli_error($conn)]);
 }

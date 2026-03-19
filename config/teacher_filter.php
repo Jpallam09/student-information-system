@@ -10,7 +10,20 @@ function getTeacherYearLevels() {
     if (empty($year_levels_str)) {
         return [];
     }
-    return explode(',', $year_levels_str);
+    $levels = explode(',', $year_levels_str);
+    $normalized = [];
+    foreach ($levels as $level) {
+        $level = trim($level);
+        if (!empty($level)) {
+            // Normalize: "2nd year" -> "2nd Year", "4thyear" -> "4th Year"
+            $level = ucwords(strtolower($level));
+            if (!preg_match('/\bYear$/i', $level)) {
+                $level .= ' Year';
+            }
+            $normalized[] = $level;
+        }
+    }
+    return $normalized;
 }
 
 // Get teacher's assigned sections as array
@@ -19,7 +32,15 @@ function getTeacherSections() {
     if (empty($sections_str)) {
         return [];
     }
-    return explode(',', $sections_str);
+    $sections = explode(',', $sections_str);
+    $normalized = [];
+    foreach ($sections as $sec) {
+        $sec = trim($sec);
+        if (!empty($sec)) {
+            $normalized[] = $sec;
+        }
+    }
+    return $normalized;
 }
 
 // Build SQL WHERE clause for year level filtering
@@ -46,7 +67,8 @@ function getSectionFilter($column = 'section') {
     
     $escaped = array_map(function($s) use ($column) {
         global $conn;
-        return "'" . mysqli_real_escape_string($conn, trim($s)) . "'";
+        $s = trim($s);
+        return "'" . mysqli_real_escape_string($conn, $s) . "'";
     }, $sections);
     
     return " AND $column IN (" . implode(',', $escaped) . ")";

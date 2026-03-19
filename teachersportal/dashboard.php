@@ -142,9 +142,12 @@ while($row = mysqli_fetch_assoc($sections_query)){
 }
 
 // ================== RANKING STUDENTS (GPA 1.0-1.5) ==================
-// Senior-level: Calculate GPA per student and filter only high-achieving students for ranking modal.
-$ranking_students = [];
-$student_query = mysqli_query($conn, "SELECT * FROM students WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter ORDER BY last_name ASC");
+    // Senior-level: Calculate GPA per student and filter only high-achieving students for ranking modal.
+    // DEBUG: Log filter
+    error_log("DEBUG Ranking filter: year_filter=[$teacher_year_filter] section_filter=[$teacher_section_filter] | Levels: " . implode(', ', getTeacherYearLevels()));
+    $ranking_students = [];
+    $student_query = mysqli_query($conn, "SELECT * FROM students WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter ORDER BY last_name ASC");
+
 
 while($student = mysqli_fetch_assoc($student_query)){
     $student_id = $student['id'];
@@ -200,10 +203,13 @@ $attendance_students_query = mysqli_query($conn, "
            COUNT(a.id) as total_records
     FROM students s
     LEFT JOIN attendance a ON s.id = a.student_id AND YEAR(a.date) = YEAR(CURDATE())
-    WHERE s.course='$selected_course'
+    WHERE s.course='$selected_course' $teacher_year_filter $teacher_section_filter
     GROUP BY s.id
     ORDER BY s.year_level, s.section, s.last_name
 ");
+// DEBUG: Log attendance filter
+error_log("DEBUG Attendance filter: year_filter=[$teacher_year_filter] section_filter=[$teacher_section_filter]");
+
 $attendance_students = [];
 while($row = mysqli_fetch_assoc($attendance_students_query)){
     $row['attendance_percentage'] = ($row['total_records']>0) ? round(($row['total_present']/$row['total_records'])*100,2) : 0;
