@@ -2,6 +2,9 @@
 session_start();
 include '../config/database.php';
 include '../config/current_school_year.php';
+include 'components/inactive_warning.php';
+
+
 
 /* -----------------------------
    STUDENT AUTHENTICATION
@@ -30,16 +33,9 @@ if (!$student) {
 $active_year = getActiveSchoolYear($conn);
 $active_sem = getActiveSemester($conn);
 
-if ($student['school_year'] != $active_year || $student['semester'] != $active_sem) {
-    $error_html = '<div style="padding: 40px; text-align: center; background: var(--slate-50); border-radius: 12px; margin: 20px;">
-        <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: var(--accent-amber); margin-bottom: 20px;"></i>
-        <h2 style="color: var(--slate-800);">Inactive Enrollment</h2>
-        <p style="font-size: 1.1rem; color: var(--slate-600);">Your enrollment is for <strong>' . htmlspecialchars($student['school_year'] . ' ' . $student['semester'] . ' Sem') . '</strong></p>
-        <p>Current active term: <strong>' . htmlspecialchars($active_year . ' ' . $active_sem . ' Sem') . '</strong></p>
-        <p>Contact administrator to update your enrollment.</p>
-    </div>';
-    die($error_html);
-}
+// NEW: Check inactive enrollment (no longer blocks access)
+$is_inactive = ($_SESSION['inactive_enrollment'] ?? false) || 
+               ($student['school_year'] != $active_year || $student['semester'] != $active_sem);
 
 $course_name = $student['course'];
 $year        = $student['year_level'];
@@ -201,9 +197,12 @@ if (!empty($current_task_ids)) {
     <div style="margin-bottom: 20px; padding: 15px; background: var(--slate-100); border-radius: 8px;">
         <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
             <i class="fas fa-info-circle"></i> 
-            Active Term: <strong><?php echo htmlspecialchars($active_year . ' ' . $active_sem . ' Sem'); ?></strong> | 
+            <?php if($is_inactive): ?>
+                <strong style="color: #f59e0b;">📅 Past Term Records</strong> | 
+            <?php endif; ?>Active Term: <strong><?php echo htmlspecialchars($active_year . ' ' . $active_sem . ' Sem'); ?></strong> | 
             Course: <strong><?php echo htmlspecialchars($course_name); ?></strong> - 
             Year <strong><?php echo htmlspecialchars($year); ?></strong> - Section <strong><?php echo htmlspecialchars($section); ?></strong>
+            <?php if($is_inactive): ?> | <em style="color: #a16207;">Enrolled: <?php echo htmlspecialchars($student['school_year'].' '.$student['semester'].' Sem'); ?></em><?php endif; ?>
         </p>
     </div>
 

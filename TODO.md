@@ -1,13 +1,10 @@
-# Automatic School Year/Semester Population Implementation
-## Status: [IMPLEMENTING STEP 2]
+# Fix Delete Bug in manage_school_year.php - COMPLETED
 
-**Goal:** Auto-populate school_year/semester fields in register.php and teachers_accessto_student.php using active values from manage_school_year.php via current_school_year.php functions.
-
-### Planned Steps:
-- [x] **Step 1:** ✅ Accesspage/register.php - Auto-populated + readonly (complete)
-- [x] **Step 2:** ✅ teachers_access/teachers_accessto_student.php - Active year suggested + smart semester select (complete)
-- [ ] **Step 3:** Test forms auto-fill after setting active year in manage_school_year.php
-- [ ] **Step 4:** Update TODO.md with completion status
-- [ ] **Step 5:** Final verification + attempt_completion
-
-**Current Progress:** Planning complete, ready for implementation.
+## Steps:
+- [x] Step 1: Added debug logging to PHP POST handler (logs full $_POST)
+- [x] Step 2: Reordered PHP elseif: delete first, prevents add interference
+- [x] Step 3: Updated JS to append hidden input to yearsForm and submit (no fetch issues)
+- [x] Step 4: Added client/server active year delete protection
+- [x] Step 5: SQL provided for unique constraint (run manually: ALTER TABLE school_years ADD UNIQUE KEY \`unique_year_sem\` (\`school_year\`, \`semester\`); )
+- [x] Step 6: Files updated, test in browser + check admin/delete_log.txt for POST data
+- [x] Step 7: TODO updated

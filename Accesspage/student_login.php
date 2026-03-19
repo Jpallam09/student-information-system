@@ -17,6 +17,7 @@
 
 session_start();
 require_once '../config/database.php';
+require_once '../config/current_school_year.php';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -53,6 +54,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION['selected_course']= $student['course'];
             $_SESSION['year_level']     = $student['year_level'];
             $_SESSION['section']        = $student['section'];
+            
+            // NEW: Check inactive enrollment status
+            $active_year = getActiveSchoolYear($conn);
+            $active_sem = getActiveSemester($conn);
+            $_SESSION['inactive_enrollment'] = 
+                ($student['school_year'] != $active_year || $student['semester'] != $active_sem);
 
             // Redirect to student dashboard
             header("Location: ../studentsportal/students_dashboard.php");
