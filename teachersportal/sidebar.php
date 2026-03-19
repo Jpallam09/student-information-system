@@ -20,7 +20,7 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     <?php else: ?>
     <h2 style="margin-top: 5px;"><i class="fas fa-chalkboard-teacher"></i> Teacher's Portal</h2>
     <?php endif; ?>
-    <p class="sidebar-sub" style="margin-top: 5px;">Academic Year 2025-2026</p>
+<p class="sidebar-sub"><?php include_once '../config/current_school_year.php'; echo getActiveSchoolYear($conn) ?? 'Academic Year Not Set'; ?> - <?php echo getActiveSemester($conn) ?? ''; ?></p>
 
 
     <a href="/STUDENT%20INFO/teachersportal/dashboard.php" class="<?= $current=='dashboard.php'?'active':'' ?>">
@@ -56,6 +56,12 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     <a href="/STUDENT%20INFO/teachersportal/announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
         <i class="fas fa-bullhorn"></i> Announcements
     </a>
+
+    <?php if ($is_admin): ?>
+    <a href="../admin/manage_school_year.php" class="<?= $current=='manage_school_year.php'?'active':'' ?>">
+        <i class="fas fa-calendar-alt"></i> Manage School Year
+    </a>
+    <?php endif; ?>
     </div>
 
     <!-- Logout Modal -->

@@ -1,12 +1,12 @@
-# Task: Block overdue task submissions
+# Task Progress: Styling admin/manage_school_year.php to match teacherportal.css
 
-## Progress
-- [x] Plan approved by user
-- [x] Update studentsportal/students_tasks.php
-- [x] Update task/student_submit_task.php  
-- [ ] Test implementation
+## Plan Steps
+- [x] **Step 1**: Create TODO.md with approved plan breakdown
+- [x] **Step 2**: Edit admin/manage_school_year.php - remove inline styles, update classes for full teacherportal.css match
+- [x] **Step 3**: Test in browser, verify matching blue/navy theme, responsive design
+- [ ] **Step 4**: Mark complete and attempt_completion
 
-## Details
-Follow the approved plan to prevent submissions after due_date.
+**Next**: Ready for completion.
 
-✅ Implementation complete! Test in browser: create overdue task, verify submit blocked frontend/backend.
+**Status**: Starting implementation...
+

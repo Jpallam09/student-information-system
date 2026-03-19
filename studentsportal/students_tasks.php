@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../config/database.php';
+include '../config/current_school_year.php';
 
 /* -----------------------------
    STUDENT AUTHENTICATION
@@ -15,13 +16,30 @@ $student_id = $_SESSION['student_id'];
 /* -----------------------------
    GET STUDENT INFO
 ------------------------------ */
-$student_query = mysqli_query($conn, "
-    SELECT course, year_level, section 
+$student_result = mysqli_query($conn, "
+    SELECT course, year_level, section, school_year, semester
     FROM students 
     WHERE id='$student_id'
 ") or die(mysqli_error($conn));
 
-$student = mysqli_fetch_assoc($student_query);
+$student = mysqli_fetch_assoc($student_result);
+if (!$student) {
+    die('Student record not found.');
+}
+
+$active_year = getActiveSchoolYear($conn);
+$active_sem = getActiveSemester($conn);
+
+if ($student['school_year'] != $active_year || $student['semester'] != $active_sem) {
+    $error_html = '<div style="padding: 40px; text-align: center; background: var(--slate-50); border-radius: 12px; margin: 20px;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: var(--accent-amber); margin-bottom: 20px;"></i>
+        <h2 style="color: var(--slate-800);">Inactive Enrollment</h2>
+        <p style="font-size: 1.1rem; color: var(--slate-600);">Your enrollment is for <strong>' . htmlspecialchars($student['school_year'] . ' ' . $student['semester'] . ' Sem') . '</strong></p>
+        <p>Current active term: <strong>' . htmlspecialchars($active_year . ' ' . $active_sem . ' Sem') . '</strong></p>
+        <p>Contact administrator to update your enrollment.</p>
+    </div>';
+    die($error_html);
+}
 
 $course_name = $student['course'];
 $year        = $student['year_level'];
@@ -85,14 +103,14 @@ if (!empty($subject_ids_str)) {
     $task_types = ['activities', 'homework', 'laboratory'];
     
     foreach ($task_types as $type) {
-        $tasks_query = mysqli_query($conn, "
-            SELECT t.*, t.due_date, s.subject_name, s.code
-            FROM tasks t
-            JOIN subjects s ON t.subject_id = s.id
-            WHERE t.subject_id IN ($subject_ids_str)
-              AND t.task_type = '$type'
-            ORDER BY t.created_at DESC
-        ") or die(mysqli_error($conn));
+            $tasks_query = mysqli_query($conn, "
+                SELECT t.*, t.due_date, s.subject_name, s.code
+                FROM tasks t
+                JOIN subjects s ON t.subject_id = s.id
+                WHERE t.subject_id IN ($subject_ids_str)
+                  AND t.task_type = '$type'
+                ORDER BY t.created_at DESC
+            ") or die(mysqli_error($conn));
         
         while ($row = mysqli_fetch_assoc($tasks_query)) {
             // Check if student submitted this task
@@ -183,9 +201,9 @@ if (!empty($current_task_ids)) {
     <div style="margin-bottom: 20px; padding: 15px; background: var(--slate-100); border-radius: 8px;">
         <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
             <i class="fas fa-info-circle"></i> 
-            Viewing tasks for: <strong><?php echo htmlspecialchars($course_name); ?></strong> - 
-            <strong>Year <?php echo htmlspecialchars($year); ?></strong> - 
-            Section <strong><?php echo htmlspecialchars($section); ?></strong>
+            Active Term: <strong><?php echo htmlspecialchars($active_year . ' ' . $active_sem . ' Sem'); ?></strong> | 
+            Course: <strong><?php echo htmlspecialchars($course_name); ?></strong> - 
+            Year <strong><?php echo htmlspecialchars($year); ?></strong> - Section <strong><?php echo htmlspecialchars($section); ?></strong>
         </p>
     </div>
 
@@ -257,7 +275,6 @@ if (!empty($current_task_ids)) {
                                 <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View Task from Teacher</button>
                                 <?php if($task['is_submitted']): ?>
                                     <button class="btn-task btn-submitted" onclick="viewMySubmission(<?php echo $task['id']; ?>)" style="background: var(--accent-emerald); color: white;"><i class="fas fa-check"></i> View Submission</button>
-                                    <button class="btn-task btn-delete-submission" onclick="quickDeleteSubmission(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>')" style="background: #ef4444; color: white;" title="Delete Submission"><i class="fas fa-trash"></i></button>
                                 <?php else: ?>
                                     <button class="btn-task btn-submit" onclick="openSubmitModal(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>', '<?php echo htmlspecialchars($task['subject_name']); ?>')"><i class="fas fa-upload"></i> Submit Task to Teacher</button>
                                 <?php endif; ?>
@@ -300,7 +317,6 @@ if (!empty($current_task_ids)) {
                                 <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View</button>
                                 <?php if($task['is_submitted']): ?>
                                     <button class="btn-task btn-submitted" onclick="viewMySubmission(<?php echo $task['id']; ?>)" style="background: var(--accent-emerald); color: white;"><i class="fas fa-check"></i> View Submission</button>
-                                    <button class="btn-task btn-delete-submission" onclick="quickDeleteSubmission(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>')" style="background: #ef4444; color: white;" title="Delete Submission"><i class="fas fa-trash"></i></button>
                                 <?php else: ?>
                                     <button class="btn-task btn-submit" onclick="openSubmitModal(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>', '<?php echo htmlspecialchars($task['subject_name']); ?>')"><i class="fas fa-upload"></i> Submit</button>
                                 <?php endif; ?>
@@ -343,7 +359,6 @@ if (!empty($current_task_ids)) {
                                 <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View</button>
                                 <?php if($task['is_submitted']): ?>
                                     <button class="btn-task btn-submitted" onclick="viewMySubmission(<?php echo $task['id']; ?>)" style="background: var(--accent-emerald); color: white;"><i class="fas fa-check"></i> View Submission</button>
-                                    <button class="btn-task btn-delete-submission" onclick="quickDeleteSubmission(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>')" style="background: #ef4444; color: white;" title="Delete Submission"><i class="fas fa-trash"></i></button>
                                 <?php else: ?>
                                     <button class="btn-task btn-submit" onclick="openSubmitModal(<?php echo $task['id']; ?>, '<?php echo htmlspecialchars($task['title']); ?>', '<?php echo htmlspecialchars($task['subject_name']); ?>')"><i class="fas fa-upload"></i> Submit</button>
                                 <?php endif; ?>
@@ -609,22 +624,22 @@ function startStudentPolling() {
     }, 15000);
 }
 
-function showStudentNotification(message) {
+function showStudentNotification(message, type = 'success') {
     const toast = document.createElement('div');
     toast.style.cssText = `
         position: fixed; top: 20px; right: 20px; z-index: 10000;
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;
+        background: linear-gradient(135deg, ${type === 'error' ? '#ef4444, #dc2626' : '#10b981, #059669'} 100%); color: white;
         padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         font-weight: 500; max-width: 350px; transform: translateX(400px); transition: transform 0.3s;
     `;
-    toast.innerHTML = `<i class="fas fa-eye"></i> ${message}`;
+    toast.innerHTML = type === 'error' ? `<i class="fas fa-trash"></i> ${message}` : `<i class="fas fa-eye"></i> ${message}`;
     document.body.appendChild(toast);
     
     setTimeout(() => toast.style.transform = 'translateX(0)', 100);
     setTimeout(() => {
         toast.style.transform = 'translateX(400px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 5000);
+        setTimeout(() => toast.remove(), 400);
+    }, 6000);
 }
 
 // Init on load
@@ -780,7 +795,7 @@ document.getElementById('submitTaskForm').addEventListener('submit', function(e)
     const fileInput = document.getElementById('submissionFile');
     
     if (!fileInput.files.length) {
-        alert('Please select a file to submit');
+        showStudentNotification('Please select a file to submit ❌', 'error');
         return;
     }
     
@@ -803,7 +818,7 @@ document.getElementById('submitTaskForm').addEventListener('submit', function(e)
         if (data.success) {
 showStudentNotification('Your task has been submitted successfully! ✅');
             closeSubmitModal();
-            location.reload();
+            setTimeout(() => location.reload(), 2000);
         } else {
             alert('Error: ' + data.message);
         }
@@ -1004,11 +1019,11 @@ function confirmDeleteSubmission() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showStudentNotification('Submission deleted successfully!');
+showStudentNotification('Submission deleted successfully!', 'error');
             closeDeleteSubmissionModal();
-            location.reload();
+            setTimeout(() => location.reload(), 2000);
         } else {
-            alert('Error: ' + data.message);
+            showStudentNotification('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {

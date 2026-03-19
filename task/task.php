@@ -566,26 +566,24 @@ $subjects_query = mysqli_query($conn, "SELECT * FROM subjects WHERE course_id = 
             formData.append('taskId', taskId);
         }
         
-        fetch('submit_task.php', { method: 'POST', body: formData })
-            .then(function(response) { return response.text(); })
-            .then(function(text) {
-                console.log('Raw response:', text);
-                try {
-                    var data = JSON.parse(text);
-                    if (data.success) {
-                        alert('Task submitted successfully!');
-                        closeTaskFormModal();
-                        loadTasksForSubject(document.getElementById('formTaskType').value);
-                    } else {
-                        alert('Error: ' + (data.message || 'Unknown error'));
-                    }
-                } catch(e) {
-                    alert('Server error: ' + text.substring(0, 200));
+fetch('submit_task.php', { 
+                method: 'POST', 
+                body: formData 
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showTeacherNotification('Task created successfully! ✅');
+                    closeTaskFormModal();
+                    const taskType = document.getElementById('formTaskType').value;
+                    loadTasksForSubject(taskType);
+                } else {
+                    showTeacherNotification('Error: ' + (data.message || 'Unknown error'), 'error');
                 }
             })
-            .catch(function(error) {
+            .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred. Please check console for details.');
+                showTeacherNotification('Network error. Please try again.', 'error');
             });
     });
     
@@ -635,13 +633,13 @@ $subjects_query = mysqli_query($conn, "SELECT * FROM subjects WHERE course_id = 
             .then(function(response) { return response.json(); })
             .then(function(data) {
                 if (data.success) {
-                    alert('Task deleted!');
+                    showTeacherNotification('Task deleted successfully!', 'error');
                     closeDeleteModal();
                     loadTasksForSubject('activities');
                     loadTasksForSubject('homework');
                     loadTasksForSubject('laboratory');
                 } else {
-                    alert('Error: ' + data.message);
+                    showTeacherNotification('Error: ' + data.message, 'error');
                 }
             });
     }
@@ -843,14 +841,32 @@ async function markAndViewSubmission(submissionId, filePath) {
         }, 4000);
     }
 
-    function startPollingFallback() {
-        if (pollInterval) clearInterval(pollInterval);
-        pollInterval = setInterval(() => {
-            fetch('get_task.php?subject_id=' + (currentSubjectId || '') + '&type=all&unread_only=1')
-                .then(r => r.json())
-                .then(data => updateUnreadBadges(data.unread_summary || {}));
-        }, 30000); // 30s fallback
-    }
+function showTeacherNotification(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; top: 20px; right: 20px; z-index: 10000;
+        background: linear-gradient(135deg, ${type === 'error' ? '#ef4444' : '#10b981'} 0%, ${type === 'error' ? '#dc2626' : '#059669'} 100%); color: white;
+        padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        font-weight: 500; max-width: 350px; transform: translateX(400px); transition: transform 0.3s;
+    `;
+    toast.innerHTML = type === 'error' ? `<i class="fas fa-exclamation-triangle"></i> ${message}` : `<i class="fas fa-check-circle"></i> ${message}`;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.style.transform = 'translateX(0)', 100);
+    setTimeout(() => {
+        toast.style.transform = 'translateX(400px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 5000);
+}
+
+function startPollingFallback() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(() => {
+        fetch('get_task.php?subject_id=' + (currentSubjectId || '') + '&type=all&unread_only=1')
+            .then(r => r.json())
+            .then(data => updateUnreadBadges(data.unread_summary || {}));
+    }, 30000); // 30s fallback
+}
 
     // Auto-connect on page load
     window.addEventListener('load', connectRealtimeUpdates);
