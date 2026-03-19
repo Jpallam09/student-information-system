@@ -34,10 +34,15 @@ if ($taskId <= 0) {
     exit();
 }
 
-// Check if task exists
-$taskCheck = mysqli_query($conn, "SELECT id FROM tasks WHERE id = $taskId");
+// Check if task exists and not overdue
+$taskCheck = mysqli_query($conn, "SELECT id, due_date FROM tasks WHERE id = $taskId");
 if (!$taskCheck || mysqli_num_rows($taskCheck) == 0) {
     echo json_encode(['success' => false, 'message' => 'Task not found']);
+    exit();
+}
+$task = mysqli_fetch_assoc($taskCheck);
+if (!empty($task['due_date']) && strtotime($task['due_date']) < time()) {
+    echo json_encode(['success' => false, 'message' => 'Task is overdue. Submissions are no longer accepted.']);
     exit();
 }
 

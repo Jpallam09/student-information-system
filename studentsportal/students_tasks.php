@@ -86,7 +86,7 @@ if (!empty($subject_ids_str)) {
     
     foreach ($task_types as $type) {
         $tasks_query = mysqli_query($conn, "
-            SELECT t.*, s.subject_name, s.code
+            SELECT t.*, t.due_date, s.subject_name, s.code
             FROM tasks t
             JOIN subjects s ON t.subject_id = s.id
             WHERE t.subject_id IN ($subject_ids_str)
@@ -97,6 +97,7 @@ if (!empty($subject_ids_str)) {
         while ($row = mysqli_fetch_assoc($tasks_query)) {
             // Check if student submitted this task
             $row['is_submitted'] = in_array($row['id'], $submitted_task_ids);
+            $row['is_overdue'] = !empty($row['due_date']) && strtotime($row['due_date']) < time();
             $tasks[$type][] = $row;
         }
     }
@@ -234,10 +235,10 @@ if (!empty($current_task_ids)) {
             </div>
             <div class="task-type-content" id="section-activities-content" style="display: none;">
                 <?php foreach ($tasks['activities'] as $task): ?>
-                    <div class="task-item" data-subject-id="<?php echo $task['subject_id']; ?>">
-                        <div class="task-item-header">
-                            <div style="flex: 1;">
-                                <h4 class="task-title"><?php echo htmlspecialchars($task['title']); ?></h4>
+                        <div class="task-item" data-task-id="<?php echo $task['id']; ?>" data-is-overdue="<?php echo $task['is_overdue'] ? 'true' : 'false'; ?>" data-due-date="<?php echo htmlspecialchars($task['due_date'] ?? ''); ?>" data-subject-id="<?php echo $task['subject_id']; ?>"> 
+                            <div class="task-item-header">
+                                <div style="flex: 1;">
+                                    <h4 class="task-title"><?php echo htmlspecialchars($task['title']); ?></h4>
                                 <span class="task-subject"><i class="fas fa-book"></i> <?php echo htmlspecialchars($task['subject_name']); ?></span>
                             </div>
                             <?php if($task['is_submitted']): ?>
@@ -628,6 +629,18 @@ function showStudentNotification(message) {
 
 // Init on load
 window.addEventListener('load', () => {
+    // Disable overdue submit buttons
+    document.querySelectorAll('.btn-submit').forEach(btn => {
+        const taskItem = btn.closest('.task-item');
+        if (taskItem && taskItem.dataset.isOverdue === 'true') {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-ban"></i> Overdue - Cannot Submit';
+            btn.style.backgroundColor = '#ef4444';
+            btn.style.opacity = '0.7';
+            btn.style.cursor = 'not-allowed';
+            btn.title = 'Task due date has passed. Cannot submit.';
+        }
+    });
     connectStudentRealtime();
     loadInitialTeacherReadStatus();
 });
@@ -743,6 +756,11 @@ function closeViewSubmissionModal() {
 
 // Submit Task
 function openSubmitModal(taskId, taskTitle, subjectName) {
+    const taskItem = document.querySelector(`.task-item[data-task-id="\${taskId}"][data-is-overdue="true"]`);
+    if (taskItem) {
+        alert('This task is overdue. You cannot submit after the due date.');
+        return;
+    }
     currentTaskId = taskId;
     document.getElementById('submitTaskId').value = taskId;
     document.getElementById('submitTaskTitle').textContent = taskTitle;

@@ -1,7 +1,12 @@
-**Previous Task Complete:** Teacher filtering fixed in dashboard.php (normalization + debug).
+# Task: Block overdue task submissions
 
-**Next Task Complete:** delete_task.php syntax fixed (missing echo json_encode).
+## Progress
+- [x] Plan approved by user
+- [x] Update studentsportal/students_tasks.php
+- [x] Update task/student_submit_task.php  
+- [ ] Test implementation
 
-**All done!** 🎉
+## Details
+Follow the approved plan to prevent submissions after due_date.
 
-Updated config/teacher_filter.php | teachersportal/dashboard.php | task/delete_task.php
+✅ Implementation complete! Test in browser: create overdue task, verify submit blocked frontend/backend.
