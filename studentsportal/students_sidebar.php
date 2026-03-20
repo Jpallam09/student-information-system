@@ -18,8 +18,16 @@ $current_page = basename($_SERVER['PHP_SELF']);
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
+    <!-- Hamburger Menu Button (Mobile) -->
+    <button class="hamburger-btn" id="hamburgerBtn">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Mobile Backdrop -->
+    <div class="mobile-backdrop" id="mobileBackdrop"></div>
+    
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
            <a href="#" class="back-arrow logout-btn" onclick="showLogoutConfirmation(event)">
         <i class="fas fa-sign-out-alt"></i>
     </a>
@@ -88,20 +96,19 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <script>
         const modal = document.getElementById('logoutModal');
 
-       function showLogoutConfirmation(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    modal.classList.add('show'); // just add class
-}
+        function showLogoutConfirmation(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            modal.classList.add('show');
+        }
 
-function closeModal() {
-    modal.classList.remove('show'); // remove class
-    // no need for setTimeout or display manipulation
-}
+        function closeModal() {
+            modal.classList.remove('show');
+        }
 
-function confirmLogout() {
-    window.location.href = '../Accesspage/student_login.php';
-}
+        function confirmLogout() {
+            window.location.href = '../Accesspage/student_login.php';
+        }
 
         // Close modal on outside click
         window.onclick = function(event) {
@@ -116,6 +123,40 @@ function confirmLogout() {
                 closeModal();
             }
         });
+
+        // Hamburger Menu Toggle
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const sidebar = document.getElementById('sidebar');
+        const mobileBackdrop = document.getElementById('mobileBackdrop');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            hamburgerBtn.classList.toggle('active');
+            hamburgerBtn.classList.toggle('hidden');
+            mobileBackdrop.classList.toggle('active');
+        }
+
+        hamburgerBtn.addEventListener('click', toggleSidebar);
+        mobileBackdrop.addEventListener('click', toggleSidebar);
+
+        // Close sidebar on window resize (desktop)
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 576) {
+                sidebar.classList.remove('active');
+                hamburgerBtn.classList.remove('active');
+                mobileBackdrop.classList.remove('active');
+            }
+        });
+
+        // Auto-close sidebar on mobile link click
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth <= 576 && e.target.closest('.sidebar a[href]')) {
+                sidebar.classList.remove('active');
+                hamburgerBtn.classList.remove('active');
+                mobileBackdrop.classList.remove('active');
+            }
+        });
     </script>
+
 </body>
 </html>

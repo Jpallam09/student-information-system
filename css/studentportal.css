@@ -117,7 +117,7 @@ i, .fas, .far, .fab, .fa, .fa-solid, .fa-regular {
 .back-arrow {
     position: fixed;
     top: 20px;
-    left: 20px;
+    right: 80px;
     font-size: 14px;
     text-decoration: none;
     color: white;
@@ -127,12 +127,18 @@ i, .fas, .far, .fab, .fa, .fa-solid, .fa-regular {
     font-weight: 600;
     box-shadow: 0 4px 15px rgba(30, 58, 95, 0.4);
     transition: all 0.3s ease;
-    z-index: 9999;
+    z-index: 1003;
     display: inline-flex;
     align-items: center;
     gap: 8px;
     border: none;
     letter-spacing: 0.02em;
+}
+
+@media screen and (max-width: 576px) {
+    .back-arrow {
+        right: 80px;
+    }
 }
 
 .back-arrow:hover {
@@ -2152,8 +2158,20 @@ button[type="submit"]:hover,
 }
 
 /* =========================
-   RESPONSIVE DESIGN
+   RESPONSIVE DESIGN - ENHANCED WITH HAMBURGER MENU
 ========================= */
+
+/* Tablet Breakpoint */
+@media screen and (max-width: 640px) {
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Desktop to Tablet */
 @media screen and (max-width: 1200px) {
     .cards-container {
         gap: 20px;
@@ -2212,25 +2230,93 @@ button[type="submit"]:hover,
 }
 
 @media screen and (max-width: 576px) {
-    .sidebar {
-        display: none;
+    /* Hamburger Menu Styles */
+    .hamburger-btn {
+        display: flex !important;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1002;
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: var(--radius-xl);
+        font-size: 20px;
+        cursor: pointer;
+        box-shadow: var(--shadow-lg);
+        transition: all var(--transition-base);
+        width: 52px;
+        height: 52px;
+        justify-content: center;
+        align-items: center;
     }
+    
+    /* Fix logout button overlap with hamburger in mobile */
+    
+.hamburger-btn.active {
+        background: var(--accent-rose);
+        transform: scale(0.98);
+    }
+    
+    .hamburger-btn.hidden {
+        display: none !important;
+    }
+    
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--transition-base);
+        z-index: 1000;
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .mobile-backdrop {
+        display: block !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+        opacity: 0;
+        visibility: hidden;
+        transition: all var(--transition-base);
+    }
+    
+    .mobile-backdrop.active {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    /* .sidebar .back-arrow {
+        display: none !important;
+    } */
+    
     .content, .main-content {
         margin-left: 0;
         width: 100%;
         padding: 16px;
+        transition: margin-left var(--transition-base);
     }
+    
     .cards-container {
         grid-template-columns: 1fr;
     }
+    
     .modal-content {
         width: 95%;
         margin: 10% auto;
         padding: 20px;
     }
+    
     .modal-actions {
         flex-direction: column;
     }
+    
     .info-grid {
         grid-template-columns: 1fr;
     }

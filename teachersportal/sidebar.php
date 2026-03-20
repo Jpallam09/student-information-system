@@ -10,7 +10,26 @@ if (!isset($back_url)) {
 $admin_types = ['Seeder', 'Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 ?>
-<div class="sidebar">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+    <link rel="stylesheet" href="../css/teacherportal.css">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+    <!-- Hamburger Menu Button (Mobile) -->
+    <button class="hamburger-btn" id="hamburgerBtn">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <!-- Mobile Backdrop -->
+    <div class="mobile-backdrop" id="mobileBackdrop"></div>
+    
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
     <a href="#" class="back-arrow logout-btn" onclick="showLogoutConfirmation(event)">
         <i class="fas fa-sign-out-alt"></i>
     </a>
@@ -23,37 +42,37 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
 <p class="sidebar-sub"><?php include_once '../config/current_school_year.php'; echo getActiveSchoolYear($conn) ?? 'Academic Year Not Set'; ?> - <?php echo getActiveSemester($conn) ?? ''; ?></p>
 
 
-    <a href="/STUDENT%20INFO/teachersportal/dashboard.php" class="<?= $current=='dashboard.php'?'active':'' ?>">
+    <a href="dashboard.php" class="<?= $current=='dashboard.php'?'active':'' ?>">
         <i class="fas fa-th-large"></i> Dashboard
     </a>
 
-    <a href="/STUDENT%20INFO/teachersportal/students.php" class="<?= $current=='students.php'?'active':'' ?>">
+    <a href="students.php" class="<?= $current=='students.php'?'active':'' ?>">
         <i class="fas fa-user-graduate"></i> Students
     </a>
 
-    <a href="/STUDENT%20INFO/teachersportal/grades.php" class="<?= $current=='grades.php'?'active':'' ?>">
+    <a href="grades.php" class="<?= $current=='grades.php'?'active':'' ?>">
         <i class="fas fa-chart-line"></i> Grades
     </a>
 
     <?php if(!$is_admin): ?>
-    <a href="/STUDENT%20INFO/teachersportal/attendance.php" class="<?= $current=='attendance.php'?'active':'' ?>">
+    <a href="attendance.php" class="<?= $current=='attendance.php'?'active':'' ?>">
         <i class="fas fa-calendar-check"></i> Attendance
     </a>
 
-    <a href="/STUDENT%20INFO/task/task.php" class="<?= $current=='task.php'?'active':'' ?>">
+    <a href="../task/task.php" class="<?= $current=='task.php'?'active':'' ?>">
         <i class="fas fa-tasks"></i> Tasks
     </a>
 <?php endif; ?>
 
-    <a href="/STUDENT%20INFO/teachersportal/subjects.php" class="<?= $current=='subjects.php'?'active':'' ?>">
+    <a href="subjects.php" class="<?= $current=='subjects.php'?'active':'' ?>">
         <i class="fas fa-book"></i> Subjects & Classes
     </a>
 
-    <a href="/STUDENT%20INFO/teachersportal/schedule.php" class="<?= $current=='schedule.php'?'active':'' ?>">
+    <a href="schedule.php" class="<?= $current=='schedule.php'?'active':'' ?>">
         <i class="fas fa-calendar-alt"></i> Schedules
     </a>
 
-    <a href="/STUDENT%20INFO/teachersportal/announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
+    <a href="announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
         <i class="fas fa-bullhorn"></i> Announcements
     </a>
 
@@ -63,6 +82,8 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     </a>
     <?php endif; ?>
     </div>
+
+</body>
 
     <!-- Logout Modal -->
     <div id="logoutModal" class="modal">
@@ -89,8 +110,8 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
             modal.classList.remove('show');
         }
 
-function confirmLogout() {
-            window.location.href = '../teachersportal/logout.php';
+        function confirmLogout() {
+            window.location.href = 'logout.php';
         }
 
         // Close modal on outside click
@@ -106,5 +127,40 @@ function confirmLogout() {
                 closeModal();
             }
         });
+
+        // Hamburger Menu Toggle
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const sidebar = document.getElementById('sidebar');
+        const mobileBackdrop = document.getElementById('mobileBackdrop');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            hamburgerBtn.classList.toggle('active');
+            hamburgerBtn.classList.toggle('hidden');
+            mobileBackdrop.classList.toggle('active');
+        }
+
+        hamburgerBtn.addEventListener('click', toggleSidebar);
+        mobileBackdrop.addEventListener('click', toggleSidebar);
+
+        // Close sidebar on window resize (desktop)
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 576) {
+                sidebar.classList.remove('active');
+                hamburgerBtn.classList.remove('active');
+                mobileBackdrop.classList.remove('active');
+            }
+        });
+
+        // Auto-close sidebar on mobile link click
+        document.addEventListener('click', function(e) {
+            if (window.innerWidth <= 576 && e.target.closest('.sidebar a[href]')) {
+                sidebar.classList.remove('active');
+                hamburgerBtn.classList.remove('active');
+                mobileBackdrop.classList.remove('active');
+            }
+        });
     </script>
+</body>
+</html>
 
