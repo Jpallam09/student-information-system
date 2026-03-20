@@ -1,10 +1,17 @@
-# Fix Delete Bug in manage_school_year.php - COMPLETED
+# Task: Improve admin/manage_school_year.php UI - Remove "Keep Active", Professional Buttons & Cards
 
-## Steps:
-- [x] Step 1: Added debug logging to PHP POST handler (logs full $_POST)
-- [x] Step 2: Reordered PHP elseif: delete first, prevents add interference
-- [x] Step 3: Updated JS to append hidden input to yearsForm and submit (no fetch issues)
-- [x] Step 4: Added client/server active year delete protection
-- [x] Step 5: SQL provided for unique constraint (run manually: ALTER TABLE school_years ADD UNIQUE KEY \`unique_year_sem\` (\`school_year\`, \`semester\`); )
-- [x] Step 6: Files updated, test in browser + check admin/delete_log.txt for POST data
-- [x] Step 7: TODO updated
+## Progress
+- [ ] Step 1: Create this TODO.md ✅
+- [x] Step 2: Remove "Keep Active" button HTML and PHP handler
+- [x] Step 3: Add icons and enhance all buttons for professional look
+- [x] Step 4: Improve cards (.active-year-card, .card, .section-box) with better styling
+- [x] Step 5: Polish table, modal, and responsive design
+- [x] Step 6: Test functionality (add/delete/set active, responsive) and attempt completion
+
+**Current Status**: Starting edits on manage_school_year.php
+
+**Notes**: 
+- Target: admin/manage_school_year.php
+- Keep PHP logic except redundant "keep active"
+- Use existing teacherportal.css classes
+

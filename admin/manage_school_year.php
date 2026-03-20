@@ -69,8 +69,15 @@ while ($row = mysqli_fetch_assoc($result)) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .delete-active { opacity: 0.5; pointer-events: none; }
-        .badge-blue { background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; }
-        .badge-red { background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; }
+        .badge-active { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); padding: 6px 12px; border-radius: var(--radius-md); font-weight: 600; }
+        .badge-inactive { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); padding: 6px 12px; border-radius: var(--radius-md); font-weight: 600; }
+        .badge-red { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); padding: 6px 12px; border-radius: var(--radius-md); font-weight: 600; }
+        .active-display { padding: 20px; background: var(--slate-50); border-radius: var(--radius-md); margin-top: 16px; display: flex; align-items: center; font-size: 1.1rem; }
+        th { position: sticky; top: 0; z-index: 10; }
+        @media (max-width: 768px) { .table-container table, .table-container thead, .table-container tbody, .table-container th, .table-container td, .table-container tr { display: block; } }
+        .message { animation: slideInMessage 0.4s ease-out; }
+        @keyframes slideInMessage { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOutMessage { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
     </style>
 </head>
 <body>
@@ -92,14 +99,14 @@ while ($row = mysqli_fetch_assoc($result)) {
     <?php 
     $active = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM school_years WHERE is_active=1"));
     ?>
-    <div class="card active-year-card">
-        <h3><i class="fas fa-crown"></i> Currently Active</h3>
+    <div class="card active-year-card" style="border-left: 5px solid var(--accent-emerald); box-shadow: var(--shadow-lg);">
+        <div style="background: linear-gradient(135deg, var(--accent-emerald), #059669); padding: 12px 20px; margin: -24px -24px 20px -24px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+            <h3 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;"><i class="fas fa-crown"></i> Currently Active</h3>
+        </div>
         <?php if ($active): ?>
             <div class="active-display">
+                <i class="fas fa-check-circle" style="color: var(--accent-emerald); margin-right: 8px;"></i>
                 <strong><?= htmlspecialchars($active['school_year'] . ' ' . $active['semester'] . ' Semester') ?></strong>
-                <form method="POST" style="display:inline;">
-                    <button type="submit" name="set_active" value="<?= $active['id'] ?>" class="btn btn-secondary">Keep Active</button>
-                </form>
             </div>
         <?php else: ?>
             <p>No active school year set. <a href="#add-form">Add one now</a></p>
@@ -108,8 +115,10 @@ while ($row = mysqli_fetch_assoc($result)) {
 
     <!-- List All Years FORM -->
     <form id="yearsForm" method="POST">
-    <div class="card">
-        <h3><i class="fas fa-list"></i> All School Years</h3>
+    <div class="card" style="box-shadow: var(--shadow-md);">
+        <div style="background: linear-gradient(135deg, var(--primary-blue), var(--accent-violet)); padding: 16px 24px; margin: -24px -24px 20px -24px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+            <h3 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;"><i class="fas fa-list"></i> All School Years</h3>
+        </div>
         <div class="table-container">
             <table>
                 <thead>
@@ -126,9 +135,10 @@ while ($row = mysqli_fetch_assoc($result)) {
                     <tr data-id="<?= $year['id'] ?>">
                         <td><?= htmlspecialchars($year['school_year']) ?></td>
                         <td><?= $year['semester'] ?> Sem</td>
-                        <td><?= $year['is_active'] ? '<span class="badge-blue">Active</span>' : '<span class="badge-red">Inactive</span>' ?></td>
+                        <td><?= $year['is_active'] ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>' ?></td>
                         <td>
-                            <button type="submit" name="set_active" value="<?= $year['id'] ?>" class="btn <?= $year['is_active'] ? 'btn-secondary' : 'btn-primary' ?>">
+                            <button type="submit" name="set_active" value="<?= $year['id'] ?>" class="btn <?= $year['is_active'] ? 'btn-success' : 'btn-primary' ?>" title="<?= $year['is_active'] ? 'Currently Active' : 'Make Active' ?>">
+                                <i class="fas fa-<?= $year['is_active'] ? 'check-circle' : 'play' ?>"></i>
                                 <?= $year['is_active'] ? 'Active' : 'Set Active' ?>
                             </button>
                         </td>
@@ -146,13 +156,15 @@ while ($row = mysqli_fetch_assoc($result)) {
     </form>
 
     <!-- Add New Year Form -->
-    <div class="section-box" id="add-form">
-        <h2><i class="fas fa-plus"></i> Add New School Year</h2>
+    <div class="section-box" id="add-form" style="box-shadow: var(--shadow-lg); border: 1px solid var(--border-light);">
+        <div style="background: linear-gradient(135deg, var(--accent-emerald), #10b981); padding: 20px 24px; margin: -24px -24px 24px -24px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
+            <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 12px;"><i class="fas fa-plus"></i> Add New School Year</h2>
+        </div>
         <form method="POST">
             <div class="form-row">
                 <div class="form-group">
-                    <label>School Year (e.g., 2025-2026)</label>
-                    <input type="text" name="school_year" pattern="^\d{4}-\d{4}$" maxlength="9" oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required placeholder="2025-2026" class="input-field">
+                    <label>School Year (e.g., 1978-1979)</label>
+                    <input type="text" name="school_year" pattern="^\d{4}-\d{4}$" maxlength="9" oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required placeholder="1978-1979" class="input-field">
                 </div>
                 <div class="form-group">
                     <label>Semester</label>
@@ -162,7 +174,9 @@ while ($row = mysqli_fetch_assoc($result)) {
                     </select>
                 </div>
             </div>
-            <button type="submit" name="add_year" class="btn-primary">Add School Year</button>
+            <button type="submit" name="add_year" class="btn-primary">
+                <i class="fas fa-plus"></i> Add School Year
+            </button>
         </form>
     </div>
 
@@ -173,8 +187,12 @@ while ($row = mysqli_fetch_assoc($result)) {
         <h2><i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> Confirm Delete</h2>
         <p>Are you sure you want to delete this school year and semester? This action cannot be undone.</p>
         <div class="modal-actions">
-            <button id="cancelDeleteBtn" class="btn-outline">Cancel</button>
-            <button id="confirmDeleteBtn" class="btn-danger">Delete</button>
+            <button id="cancelDeleteBtn" class="btn-outline">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button id="confirmDeleteBtn" class="btn-danger">
+                <i class="fas fa-trash-alt"></i> Delete
+            </button>
         </div>
     </div>
 </div>
@@ -185,6 +203,15 @@ document.addEventListener("DOMContentLoaded", function(){
     var deleteModal = document.getElementById("deleteModal");
     let targetRow = null;
     let deleteId = null;
+
+    // Auto-hide messages after 5 seconds with slide out
+    const messages = document.querySelectorAll('.message');
+    messages.forEach(msg => {
+        setTimeout(() => {
+            msg.style.animation = 'slideOutMessage 0.4s ease-out forwards';
+            setTimeout(() => msg.remove(), 400);
+        }, 5000);
+    });
 
     // Open delete modal
     document.querySelectorAll(".delete-schedule").forEach(function(btn){

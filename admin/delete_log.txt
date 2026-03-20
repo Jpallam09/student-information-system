@@ -1,0 +1,15 @@
+2026-03-20 04:41:33 - POST DATA: {"set_active":"26"}
+2026-03-20 04:41:39 - POST DATA: {"set_active":"27"}
+2026-03-20 04:41:42 - POST DATA: {"set_active":"20"}
+2026-03-20 04:41:43 - POST DATA: {"set_active":"27"}
+2026-03-20 04:41:55 - POST DATA: {"delete_year":"20"}
+2026-03-20 04:41:55 - Delete attempt id: 20, affected: 1, error: 
+2026-03-20 04:43:16 - POST DATA: {"delete_year":"20"}
+2026-03-20 04:43:16 - Delete attempt id: 20, affected: 0, error: 
+2026-03-20 04:44:06 - POST DATA: {"delete_year":"20"}
+2026-03-20 04:44:06 - Delete attempt id: 20, affected: 0, error: 
+2026-03-20 04:44:15 - POST DATA: {"school_year":"1978-1979","semester":"1st","add_year":""}
+2026-03-20 04:44:27 - POST DATA: {"delete_year":"28"}
+2026-03-20 04:44:27 - Delete attempt id: 28, affected: 1, error: 
+2026-03-20 04:45:39 - POST DATA: {"delete_year":"28"}
+2026-03-20 04:45:39 - Delete attempt id: 28, affected: 0, error: 
