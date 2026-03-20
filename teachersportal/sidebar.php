@@ -41,21 +41,20 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     <?php endif; ?>
 <p class="sidebar-sub"><?php include_once '../config/current_school_year.php'; echo getActiveSchoolYear($conn) ?? 'Academic Year Not Set'; ?> - <?php echo getActiveSemester($conn) ?? ''; ?></p>
 
-
-    <a href="dashboard.php" class="<?= $current=='dashboard.php'?'active':'' ?>">
+    <a href="../teachersportal/dashboard.php" class="<?= $current=='dashboard.php'?'active':'' ?>">
         <i class="fas fa-th-large"></i> Dashboard
     </a>
 
-    <a href="students.php" class="<?= $current=='students.php'?'active':'' ?>">
+    <a href="../teachersportal/students.php" class="<?= $current=='students.php'?'active':'' ?>">
         <i class="fas fa-user-graduate"></i> Students
     </a>
 
-    <a href="grades.php" class="<?= $current=='grades.php'?'active':'' ?>">
+    <a href="../teachersportal/grades.php" class="<?= $current=='grades.php'?'active':'' ?>">
         <i class="fas fa-chart-line"></i> Grades
     </a>
 
     <?php if(!$is_admin): ?>
-    <a href="attendance.php" class="<?= $current=='attendance.php'?'active':'' ?>">
+    <a href="../teachersportal/attendance.php" class="<?= $current=='attendance.php'?'active':'' ?>">
         <i class="fas fa-calendar-check"></i> Attendance
     </a>
 
@@ -64,15 +63,15 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     </a>
 <?php endif; ?>
 
-    <a href="subjects.php" class="<?= $current=='subjects.php'?'active':'' ?>">
+    <a href="../teachersportal/subjects.php" class="<?= $current=='subjects.php'?'active':'' ?>">
         <i class="fas fa-book"></i> Subjects & Classes
     </a>
 
-    <a href="schedule.php" class="<?= $current=='schedule.php'?'active':'' ?>">
+    <a href="../teachersportal/schedule.php" class="<?= $current=='schedule.php'?'active':'' ?>">
         <i class="fas fa-calendar-alt"></i> Schedules
     </a>
 
-    <a href="announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
+    <a href="../teachersportal/announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
         <i class="fas fa-bullhorn"></i> Announcements
     </a>
 
@@ -111,7 +110,7 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
         }
 
         function confirmLogout() {
-            window.location.href = 'logout.php';
+            window.location.href = '../teachersportal/logout.php';
         }
 
         // Close modal on outside click
@@ -163,4 +162,3 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     </script>
 </body>
 </html>
-
