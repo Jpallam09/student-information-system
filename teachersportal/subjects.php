@@ -64,6 +64,49 @@ if (isset($_POST['update_class_id'])) {
     exit();
 }
 
+// ================== LIST STUDENTS FOR CLASS ==================
+if (isset($_GET['action']) && $_GET['action'] == 'list_students' && isset($_GET['class_id']) && isset($_GET['section']) && isset($_GET['year_level'])) {
+    $selected_course = $_SESSION['teacher_course'] ?? '';
+    if (empty($selected_course)) {
+        header('Content-Type: application/json');
+        echo json_encode([]);
+        exit();
+    }
+    
+    $admin_types = ['Seeder', 'Administrator'];
+    $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
+    $class_year_filter = '';
+    $class_section_filter = '';
+    if (!$is_admin) {
+        $class_year_filter = getYearLevelFilter('year_level');
+        $class_section_filter = getSectionFilter('section');
+    }
+    
+    $class_id = intval($_GET['class_id']);
+    $section = mysqli_real_escape_string($conn, $_GET['section']);
+    $year_level = mysqli_real_escape_string($conn, $_GET['year_level']);
+    
+    $student_query = mysqli_query($conn, "
+        SELECT CONCAT(first_name, ' ', last_name) AS full_name, student_id
+        FROM students 
+        WHERE course = '$selected_course' 
+        AND section = '$section' 
+        AND year_level = '$year_level'
+        $class_year_filter
+        $class_section_filter
+        ORDER BY last_name ASC, first_name ASC
+    ");
+    
+    $students = [];
+    while ($row = mysqli_fetch_assoc($student_query)) {
+        $students[] = $row;
+    }
+    
+    header('Content-Type: application/json');
+    echo json_encode($students);
+    exit();
+}
+
 // ================== BACK BUTTON ==================
 $back_url = "../Accesspage/teacher_login.php";
 
@@ -280,6 +323,7 @@ echo "<tr><td colspan='5'>No subjects found.</td></tr>";
 <h2>Class Management</h2>
 
 <p style="margin-top:5px;">Manage all classes and sections</p>
+<?php if (!$is_admin): ?><p style="margin-top:5px;">Click cards to View List of Students</p><?php endif; ?>
 
 </div>
 
@@ -305,10 +349,11 @@ while ($class = mysqli_fetch_assoc($classes_query)):
 
 ?>
 
-<div class="card" 
+<div class="card <?php if (!$is_admin): ?>clickable-card<?php endif; ?>" 
      data-id="<?= $class['id'] ?>" 
      data-section="<?= htmlspecialchars($class['section'],ENT_QUOTES) ?>" 
-     data-year="<?= htmlspecialchars($class['year_level'],ENT_QUOTES) ?>">
+     data-year="<?= htmlspecialchars($class['year_level'],ENT_QUOTES) ?>" 
+     <?php if (!$is_admin): ?>onclick="openStudentModal(<?= $class['id'] ?>, '<?php echo addslashes($class['section']); ?>', '<?php echo addslashes($class['year_level']); ?>')" style="cursor: pointer;" <?php endif; ?>>
 
 <h3>Section <?= htmlspecialchars($class['section']) ?></h3>
 
@@ -319,12 +364,10 @@ while ($class = mysqli_fetch_assoc($classes_query)):
         
         <?php if ($is_admin): ?>
         <div class="card-actions">
-            <a href="#" class="edit-class" title="Edit"><i class="fas fa-pencil"></i></a>
-            <a href="#" class="delete-class" title="Delete"><i class="fas fa-trash"></i></a>
+            <a href="#" class="edit-class" title="Edit" onclick="event.stopPropagation()"><i class="fas fa-pencil"></i></a>
+            <a href="#" class="delete-class" title="Delete" onclick="event.stopPropagation()"><i class="fas fa-trash"></i></a>
         </div>
         <?php endif; ?>
-
-
 
 </div>
 
@@ -387,6 +430,28 @@ echo "<p>No classes found for this course.</p>";
     </div>
 </div>
 
+<!-- Students List Modal -->
+<div id="studentListModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="studentModalTitle">Students in Class</h2>
+        <table id="studentsTable" style="width:100%; margin-top:20px;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Student Name</th>
+                    <th>Student ID</th>
+                </tr>
+            </thead>
+            <tbody id="studentsTableBody">
+                <tr><td colspan="3">Loading...</td></tr>
+            </tbody>
+        </table>
+        <div class="modal-actions" style="margin-top:20px;">
+            <button type="button" class="btn-outline" onclick="closeStudentModal()">Close</button>
+        </div>
+    </div>
+</div>
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
@@ -448,9 +513,80 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 
     // Edit modal cancel button
-    document.getElementById('cancelEditBtn').addEventListener("click", function(){
+document.getElementById('cancelEditBtn').addEventListener("click", function(){
         editModal.style.display = "none";
     });
+
+    // Student List Modal handlers
+    var studentListModal = document.getElementById('studentListModal');
+    if (studentListModal) {
+        document.querySelector('#studentListModal .close').addEventListener("click", function(){
+            studentListModal.style.display = "none";
+        });
+    }
+
+    // Override window.onclick to include student modal
+    const originalOnClick = window.onclick;
+    window.onclick = function(event) {
+        if (originalOnClick) originalOnClick(event);
+        if (event.target == studentListModal) {
+            studentListModal.style.display = "none";
+        }
+    };
+
+    // Student modal functions
+    var studentListModal = document.getElementById('studentListModal');
+    window.openStudentModal = function(id, section, year_level) {
+        document.getElementById('studentModalTitle').textContent = 'Students - Section ' + section + ' (' + year_level + ')';
+        const tbody = document.getElementById('studentsTableBody');
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Loading...</td></tr>';
+        studentListModal.style.display = "flex";
+        fetch('subjects.php?action=list_students&class_id=' + id + '&section=' + encodeURIComponent(section) + '&year_level=' + encodeURIComponent(year_level))
+            .then(response => response.json())
+            .then(students => {
+                tbody.innerHTML = '';
+                if (students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#666;">No students enrolled</td></tr>';
+                } else {
+                    students.forEach((student, index) => {
+                        const row = tbody.insertRow();
+                        row.insertCell(0).textContent = index + 1;
+                        row.insertCell(1).textContent = student.full_name || 'N/A';
+                        row.insertCell(2).textContent = student.student_id || 'N/A';
+                    });
+                }
+            })
+            .catch(error => {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#dc3545;">Error loading students</td></tr>';
+                console.error('Error:', error);
+            });
+    };
+    window.closeStudentModal = function() {
+        studentListModal.style.display = "none";
+    };
+    console.log('Student modal JS loaded');
+
+    // Student List Modal handlers
+    var studentListModal = document.getElementById('studentListModal');
+    document.querySelectorAll('#studentListModal .close').forEach(function(span){
+        span.addEventListener("click", function(){
+            studentListModal.style.display = "none";
+        });
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target == studentListModal) {
+            studentListModal.style.display = "none";
+        }
+    });
+
+    // openStudentModal function
+    // Remove duplicate broken openStudentModal - already defined above
+
+
+    window.closeStudentModal = function() {
+        studentListModal.style.display = "none";
+    };
 });
 </script>
 
