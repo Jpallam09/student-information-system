@@ -49,6 +49,12 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
         <i class="fas fa-user-graduate"></i> Students
     </a>
 
+    <?php if ($is_admin): ?>
+    <a href="teachers_list.php" class="<?= $current=='teachers_list.php'?'active':'' ?>">
+        <i class="fas fa-chalkboard-teacher"></i> Teachers List
+    </a>
+    <?php endif; ?>
+
     <a href="../teachersportal/grades.php" class="<?= $current=='grades.php'?'active':'' ?>">
         <i class="fas fa-chart-line"></i> Grades
     </a>
