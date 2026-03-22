@@ -48,46 +48,54 @@ if(!in_array(strtoupper($selected_course), $allowed_courses)){
 }
 
 // ================== GET COURSE ID ==================
-$course_result = mysqli_query($conn,"SELECT id FROM courses WHERE course_name='$selected_course'");
-if(mysqli_num_rows($course_result) > 0){
-    $course_row = mysqli_fetch_assoc($course_result);
+$stmt = $conn->prepare("SELECT id FROM courses WHERE course_name=?");
+$stmt->bind_param("s", $selected_course);
+$stmt->execute();
+$course_result = $stmt->get_result();
+if($course_result && $course_result->num_rows > 0){
+    $course_row = $course_result->fetch_assoc();
     $course_id = $course_row['id'];
 }else{
     die("Course not found in database.");
 }
+$stmt->close();
 
 // ================== FILTER VARIABLES ==================
 $selected_year = $_GET['year_level'] ?? '';
 $selected_section = $_GET['section'] ?? '';
 
-// ================== FETCH AVAILABLE SECTIONS ==================
-$section_sql = "SELECT DISTINCT section FROM students WHERE course='$selected_course' $teacher_year_filter";
+// ================== FETCH AVAILABLE SECTIONS ================== (PREPARED)
+$section_sql_base = "SELECT DISTINCT section FROM students WHERE course=? $teacher_year_filter";
+$params_sec = [$selected_course];
+$types_sec = "s";
 
 if(!empty($selected_year)){
-    $section_sql .= " AND year_level='$selected_year'";
+    $section_sql_base .= " AND year_level=?";
+    $params_sec[] = $selected_year;
+    $types_sec .= "s";
 }
-$section_sql .= " ORDER BY section ASC";
+$section_sql_base .= " ORDER BY section ASC";
 
-$sections_result = mysqli_query($conn, $section_sql);
+$stmt = $conn->prepare($section_sql_base);
+$stmt->bind_param($types_sec, ...$params_sec);
+$stmt->execute();
+$sections_result = $stmt->get_result();
 $available_sections = [];
-if($sections_result && mysqli_num_rows($sections_result) > 0){
-    while($row = mysqli_fetch_assoc($sections_result)){
-        $available_sections[] = $row['section'];
-    }
+while($row = $sections_result->fetch_assoc()){
+    $available_sections[] = $row['section'];
 }
+$stmt->close();
 
-// ================== SAVE GRADES ==================
+// ================== SAVE GRADES ================== (LOOP PREPARED)
 if(isset($_POST['save'])){
 
-    // Get expanded rows
     $expanded_students_post = $_POST['expanded_students'][0] ?? '';
     $expanded_students_post = $expanded_students_post ? explode(',', $expanded_students_post) : [];
 
-    // Check if student_id exists
     if(!empty($_POST['student_id']) && is_array($_POST['student_id'])){
-        foreach($_POST['student_id'] as $index => $student_id){
+        foreach($_POST['student_id'] as $index => $raw_student_id){
 
-            $student_id = intval($student_id);
+            $student_id = intval($raw_student_id);
             $subject_id = intval($_POST['subject_id'][$index]);
 
             $quiz = floatval($_POST['quiz'][$index]);
@@ -98,17 +106,10 @@ if(isset($_POST['save'])){
             $final = floatval($_POST['final'][$index]);
             $lab = floatval($_POST['lab'][$index]);
 
-            // Calculate percentage
             $percentage = 
-                ($quiz * 0.10) +
-                ($homework * 0.10) +
-                ($activities * 0.10) +
-                ($prelim * 0.20) +
-                ($midterm * 0.20) +
-                ($final * 0.30) +
-                ($lab * 0.20);
+                ($quiz * 0.10) + ($homework * 0.10) + ($activities * 0.10) +
+                ($prelim * 0.20) + ($midterm * 0.20) + ($final * 0.30) + ($lab * 0.20);
 
-            // Determine letter grade
             if($percentage >= 60) $grade="1.0";
             elseif($percentage >= 55) $grade="1.25";
             elseif($percentage >= 50) $grade="1.5";
@@ -120,39 +121,31 @@ if(isset($_POST['save'])){
             elseif($percentage >= 20) $grade="3.0";
             else $grade="5.0";
 
-            // Check if grade already exists
-            $check = mysqli_query($conn,
-                "SELECT id FROM grades 
-                 WHERE student_id='$student_id' 
-                 AND subject_id='$subject_id'"
-            );
+            // Check if grade exists (PREPARED)
+            $stmt_check = $conn->prepare("SELECT id FROM grades WHERE student_id=? AND subject_id=?");
+            $stmt_check->bind_param("ii", $student_id, $subject_id);
+            $stmt_check->execute();
+            $check_result = $stmt_check->get_result();
 
-            if(mysqli_num_rows($check) > 0){
+            if($check_result->num_rows > 0){
 
-                mysqli_query($conn,
-                    "UPDATE grades SET 
-                        quiz='$quiz',
-                        homework='$homework',
-                        activities='$activities',
-                        prelim='$prelim',
-                        midterm='$midterm',
-                        final='$final',
-                        lab='$lab',
-                        percentage='$percentage',
-                        letter_grade='$grade'
-                     WHERE student_id='$student_id'
-                     AND subject_id='$subject_id'"
-                );
+                $stmt_update = $conn->prepare("UPDATE grades SET 
+                    quiz=?, homework=?, activities=?, prelim=?, midterm=?, final=?, lab=?, percentage=?, letter_grade=?
+                    WHERE student_id=? AND subject_id=?");
+                $stmt_update->bind_param("dddddddiss", $quiz, $homework, $activities, $prelim, $midterm, $final, $lab, $percentage, $grade, $student_id, $subject_id);
+                $stmt_update->execute();
+                $stmt_update->close();
 
             } else {
 
-                mysqli_query($conn,
-                    "INSERT INTO grades
+                $stmt_insert = $conn->prepare("INSERT INTO grades
                     (student_id, subject_id, quiz, homework, activities, prelim, midterm, final, lab, percentage, letter_grade)
-                    VALUES
-                    ('$student_id','$subject_id','$quiz','$homework','$activities','$prelim','$midterm','$final','$lab','$percentage','$grade')"
-                );
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt_insert->bind_param("iidddddddds", $student_id, $subject_id, $quiz, $homework, $activities, $prelim, $midterm, $final, $lab, $percentage, $grade);
+                $stmt_insert->execute();
+                $stmt_insert->close();
             }
+            $stmt_check->close();
         }
 
         $message = "Grades and GPA successfully saved!";
@@ -162,17 +155,28 @@ if(isset($_POST['save'])){
     }
 }
 
-// ================== FETCH STUDENTS ==================
-$year_filter = $selected_year ? " AND year_level='$selected_year'" : "";
-$section_filter = $selected_section ? " AND section='$selected_section'" : "";
+// ================== FETCH STUDENTS ================== (PREPARED)
+$students_base_sql = "SELECT * FROM students WHERE course=? $teacher_year_filter $teacher_section_filter";
+$params_stu = [$selected_course];
+$types_stu = "s";
 
-$students_query = mysqli_query($conn,
-    "SELECT * FROM students 
-     WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter
-     $year_filter
-     $section_filter
-     ORDER BY section ASC, last_name ASC"
-);
+if ($selected_year) {
+    $students_base_sql .= " AND year_level=?";
+    $params_stu[] = $selected_year;
+    $types_stu .= "s";
+}
+if ($selected_section) {
+    $students_base_sql .= " AND section=?";
+    $params_stu[] = $selected_section;
+    $types_stu .= "s";
+}
+$students_base_sql .= " ORDER BY section ASC, last_name ASC";
+
+$stmt_stu = $conn->prepare($students_base_sql);
+$stmt_stu->bind_param($types_stu, ...$params_stu);
+$stmt_stu->execute();
+$students_query = $stmt_stu->get_result();
+$stmt_stu->close();
 
 
 // Keep expanded students after saving
@@ -290,18 +294,18 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
                                         </thead>
                                         <tbody>
                                         <?php
-                                        $subjects_query = mysqli_query($conn, 
-                                            "SELECT * FROM subjects 
-                                             WHERE course_id='$course_id' 
-                                             AND year_level='{$student['year_level']}' 
-                                             AND section='{$student['section']}' 
-                                             ORDER BY subject_name ASC"
-                                        );
-
-                                        if($subjects_query && mysqli_num_rows($subjects_query) > 0){
-                                            while($subject = mysqli_fetch_assoc($subjects_query)):
-                                                $grade_query = mysqli_query($conn, "SELECT * FROM grades WHERE student_id='{$student['id']}' AND subject_id='{$subject['id']}'");
-                                                $grade_row = mysqli_fetch_assoc($grade_query);
+$stmt_sub = $conn->prepare("SELECT * FROM subjects WHERE course_id=? AND year_level=? AND section=? ORDER BY subject_name ASC");
+$stmt_sub->bind_param("iss", $course_id, $student['year_level'], $student['section']);
+$stmt_sub->execute();
+$subjects_result = $stmt_sub->get_result();
+if($subjects_result && $subjects_result->num_rows > 0){
+    while($subject = $subjects_result->fetch_assoc()):
+$stmt_grade = $conn->prepare("SELECT * FROM grades WHERE student_id=? AND subject_id=?");
+$stmt_grade->bind_param("ii", $student['id'], $subject['id']);
+$stmt_grade->execute();
+$grade_result = $stmt_grade->get_result();
+$grade_row = $grade_result->fetch_assoc();
+$stmt_grade->close();
                                                 $letter_grade = $grade_row['letter_grade'] ?? '-';
                                         ?>
                                                 <tr>

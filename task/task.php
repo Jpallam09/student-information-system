@@ -6,6 +6,7 @@ session_start([
 ]);
 
 include_once __DIR__ . '/../config/database.php';
+include_once __DIR__ . '/../config/paths.php';
 include_once __DIR__ . '/../config/teacher_filter.php';
 
 if (!isset($_SESSION['teacher_id'])) {
@@ -747,7 +748,7 @@ async function markAndViewSubmission(submissionId, filePath) {
         } catch (error) {
             console.error('Mark read error:', error);
         }
-        window.open('student_uploads/' + filePath, '_blank');
+window.open('<?= WEB_TASK_STUDENT_UPLOADS ?>' + filePath, '_blank');
         // Refresh task badges
         if (currentSubjectId) {
             loadTasksForSubject('activities');

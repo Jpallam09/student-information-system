@@ -13,6 +13,7 @@ header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
 include_once __DIR__ . '/../config/database.php';
+include_once __DIR__ . '/../config/paths.php';
 
 // Start session to get student ID
 session_start();
@@ -82,24 +83,47 @@ if (isset($_FILES['submission_file']) && $_FILES['submission_file']['error'] !==
         exit();
     }
     
-    $uploadDir = __DIR__ . '/student_uploads/';
+    // SECURITY: Validate file type (docs, images, PDFs only - no executables)
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mime_type = finfo_file($finfo, $_FILES['submission_file']['tmp_name']);
+    finfo_close($finfo);
     
-    // Create uploads directory if it doesn't exist
-    if (!file_exists($uploadDir)) {
-        if (!mkdir($uploadDir, 0777, true)) {
-            echo json_encode(['success' => false, 'message' => 'Failed to create upload directory']);
-            exit();
-        }
+    $allowed_types = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'application/pdf', 
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain'
+    ];
+    
+    if (!in_array($mime_type, $allowed_types)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid file type. Allowed: JPG, PNG, GIF, PDF, DOC/DOCX, XLS/XLSX, TXT']);
+        exit();
     }
     
-    // Check if directory is writable
-    if (!is_writable($uploadDir)) {
-        echo json_encode(['success' => false, 'message' => 'Upload directory is not writable']);
+    // Size limit 10MB
+    if ($_FILES['submission_file']['size'] > 10 * 1024 * 1024) {
+        echo json_encode(['success' => false, 'message' => 'File too large. Max 10MB']);
+        exit();
+    }
+    
+$uploadDir = TASK_STUDENT_UPLOADS_DIR;
+    
+    // Create uploads directory if it doesn't exist
+if (!ensureWritable($uploadDir)) {
+        echo json_encode(['success' => false, 'message' => 'Upload directory not writable: ' . $uploadDir]);
         exit();
     }
     
     $originalFileName = $_FILES['submission_file']['name'];
-    $fileExtension = pathinfo($originalFileName, PATHINFO_EXTENSION);
+    $fileExtension = strtolower(pathinfo($originalFileName, PATHINFO_EXTENSION));
+    // Double-check extension
+    $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'];
+    if (!in_array($fileExtension, $allowed_exts)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid file extension']);
+        exit();
+    }
+    
     $fileName = time() . '_student' . $student_id . '_' . uniqid() . '.' . $fileExtension;
     $targetPath = $uploadDir . $fileName;
     

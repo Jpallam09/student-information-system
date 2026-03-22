@@ -4,6 +4,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 include_once __DIR__ . '/../config/database.php';
+include_once __DIR__ . '/../config/paths.php';
 
 
 try {
@@ -30,11 +31,14 @@ $attachmentPath = null;
 $originalFileName = null;
 
 if (isset($_FILES['taskAttachment']) && $_FILES['taskAttachment']['error'] !== UPLOAD_ERR_NO_FILE) {
-    $uploadDir = __DIR__ . '/uploads/';
+$uploadDir = TASK_UPLOADS_DIR;
+
+if (!ensureWritable($uploadDir)) {
+    echo json_encode(['success' => false, 'message' => 'Upload directory not writable: ' . $uploadDir]);
+    exit();
+}
     
-    if (!file_exists($uploadDir)) {
-        mkdir($uploadDir, 0777, true);
-    }
+
     
     $originalFileName = $_FILES['taskAttachment']['name'];
     $fileExtension = pathinfo($originalFileName, PATHINFO_EXTENSION);

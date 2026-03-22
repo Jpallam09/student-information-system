@@ -61,44 +61,76 @@ $year_filter = $selected_year ? " AND year_level='$selected_year'" : "";
 // SECTION FILTER
 $selected_section = $_GET['section'] ?? '';
 
-// Fetch unique sections
+// Fetch unique sections (PREPARED)
 $sections = [];
-$section_query = mysqli_query($conn,"SELECT DISTINCT section FROM students WHERE course='$selected_course' $teacher_year_filter $year_filter ORDER BY section");
-while($row = mysqli_fetch_assoc($section_query)){
+$stmt_sec = $conn->prepare("SELECT DISTINCT section FROM students WHERE course=? $teacher_year_filter $year_filter ORDER BY section");
+$stmt_sec->bind_param("s", $selected_course);
+$stmt_sec->execute();
+$sec_result = $stmt_sec->get_result();
+while($row = $sec_result->fetch_assoc()){
     $sections[] = $row['section'];
 }
+$stmt_sec->close();
 
-$section_filter = $selected_section ? " AND section='$selected_section'" : "";
+$section_filter = $selected_section ? " AND section=?" : "";
 
 // Date selection
 $date = $_POST['date'] ?? $_GET['date'] ?? date('Y-m-d');
 
-// Save attendance
+// Save attendance (LOOP PREPARED)
 $message = '';
 if(isset($_POST['save_attendance'])){
-    foreach($_POST['status'] as $student_id => $status){
-        $check = mysqli_query($conn,"SELECT id FROM attendance WHERE student_id='$student_id' AND `date`='$date'");
-        if(mysqli_num_rows($check)>0){
-            mysqli_query($conn,"UPDATE attendance SET status='$status' WHERE student_id='$student_id' AND `date`='$date'");
+    foreach($_POST['status'] as $raw_student_id => $status){
+        $student_id = intval($raw_student_id);
+        
+        $stmt_check = $conn->prepare("SELECT id FROM attendance WHERE student_id=? AND `date`=?");
+        $stmt_check->bind_param("is", $student_id, $date);
+        $stmt_check->execute();
+        $check_result = $stmt_check->get_result();
+        
+        if($check_result->num_rows > 0){
+            $stmt_update = $conn->prepare("UPDATE attendance SET status=? WHERE student_id=? AND `date`=?");
+            $stmt_update->bind_param("sis", $status, $student_id, $date);
+            $stmt_update->execute();
+            $stmt_update->close();
         } else {
-            mysqli_query($conn,"INSERT INTO attendance(student_id,`date`,status) VALUES('$student_id','$date','$status')");
+            $stmt_insert = $conn->prepare("INSERT INTO attendance(student_id,`date`,status) VALUES(?,?,?)");
+            $stmt_insert->bind_param("iss", $student_id, $date, $status);
+            $stmt_insert->execute();
+            $stmt_insert->close();
         }
+        $stmt_check->close();
     }
     $message = "Attendance saved for $date";
 }
 
-// Fetch students
-$students = mysqli_query($conn,"SELECT id, student_id, first_name, last_name, section, year_level 
+// Fetch students (PREPARED)
+$students_base = "SELECT id, student_id, first_name, last_name, section, year_level 
                                FROM students 
-                               WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter $year_filter $section_filter
-                               ORDER BY section, last_name");
+                               WHERE course=? $teacher_year_filter $teacher_section_filter $year_filter $section_filter
+                               ORDER BY section, last_name";
+$params_stu = [$selected_course];
+$types_stu = "s";
+if ($selected_section) {
+    $params_stu[] = $selected_section;
+    $types_stu .= "s";
+}
+$stmt_stu = $conn->prepare($students_base);
+$stmt_stu->bind_param($types_stu, ...$params_stu);
+$stmt_stu->execute();
+$students = $stmt_stu->get_result();
+$stmt_stu->close();
 
-// Fetch current attendance
+// Fetch current attendance (PREPARED)
 $current_attendance = [];
-$att_query = mysqli_query($conn,"SELECT student_id, status FROM attendance WHERE `date`='$date'");
-while($row = mysqli_fetch_assoc($att_query)){
+$stmt_att = $conn->prepare("SELECT student_id, status FROM attendance WHERE `date`=?");
+$stmt_att->bind_param("s", $date);
+$stmt_att->execute();
+$att_result = $stmt_att->get_result();
+while($row = $att_result->fetch_assoc()){
     $current_attendance[$row['student_id']] = $row['status'];
 }
+$stmt_att->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">

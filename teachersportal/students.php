@@ -54,35 +54,48 @@ $year_filter = $selected_year ? " AND year_level='$selected_year'" : "";
 // SECTION FILTER
 $selected_section = $_GET['section'] ?? '';
 
-// Fetch unique sections for the selected course and year
+// Fetch unique sections for the selected course and year (PREPARED)
 $sections = [];
-$section_query = mysqli_query($conn,"SELECT DISTINCT section FROM students WHERE course='$selected_course' $teacher_year_filter $year_filter ORDER BY section");
-while($row = mysqli_fetch_assoc($section_query)){
+$stmt = $conn->prepare("SELECT DISTINCT section FROM students WHERE course=? $teacher_year_filter $year_filter ORDER BY section");
+$stmt->bind_param("s", $selected_course);
+$stmt->execute();
+$section_result = $stmt->get_result();
+while($row = $section_result->fetch_assoc()){
     $sections[] = $row['section'];
 }
+$stmt->close();
 
-$section_filter = $selected_section ? " AND section='$selected_section'" : "";
+$section_filter = $selected_section ? " AND section=?" : "";
 
 // Search
-$search = '';
-if(isset($_GET['search'])){
-    $search = mysqli_real_escape_string($conn,$_GET['search']);
-}
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// Fetch students with teacher filters + optional year and section filter
-$query = "SELECT id, student_id, first_name, last_name, section, year_level 
+// Fetch students with filters (PREPARED)
+$base_query = "SELECT id, student_id, first_name, last_name, section, year_level 
           FROM students 
-          WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter $year_filter $section_filter";
+          WHERE course=? $teacher_year_filter $teacher_section_filter $year_filter $section_filter";
+
+$params = [$selected_course];
+$types = "s";
+
+if ($selected_section) {
+    $params[] = $selected_section;
+    $types .= "s";
+}
 
 if($search != ''){
-    $query .= " AND (student_id LIKE '%$search%' 
-                     OR first_name LIKE '%$search%' 
-                     OR last_name LIKE '%$search%' 
-                     OR CONCAT(first_name,' ',last_name) LIKE '%$search%' 
-                     OR section LIKE '%$search%')";
+    $base_query .= " AND (student_id LIKE ? OR first_name LIKE ? OR last_name LIKE ? 
+                     OR CONCAT(first_name,' ',last_name) LIKE ? OR section LIKE ?)";
+    $like_search = "%$search%";
+    $params = array_merge($params, [$like_search, $like_search, $like_search, $like_search, $like_search]);
+    $types .= "sssss";
 }
 
-$result = mysqli_query($conn,$query);
+$stmt = $conn->prepare($base_query);
+$stmt->bind_param($types, ...$params);
+$stmt->execute();
+$result = $stmt->get_result();
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html>

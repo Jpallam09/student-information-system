@@ -1,6 +1,7 @@
 <?php
 session_start();
-include '../config/database.php';
+include_once __DIR__ . '/../config/database.php';
+include_once __DIR__ . '/../config/paths.php';
 
 // ✅ Check if student is logged in
 if(!isset($_SESSION['student_id'])){
@@ -26,9 +27,11 @@ $student = mysqli_fetch_assoc($result);
 
 // ✅ Handle profile picture upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile_picture']) && isset($_FILES['profile_picture'])) {
-    $uploadDir = '../profile_pics/';
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0777, true);
+$uploadDir = PROFILE_PICS_DIR;
+    if (!ensureWritable($uploadDir)) {
+        $_SESSION['upload_error'] = 'Profile pics directory not writable';
+        header("Location: students_profile.php?id=$student_id");
+        exit();
     }
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     $maxSize = 2 * 1024 * 1024; // 2MB
