@@ -130,7 +130,7 @@ HTML/CSS/JS ──────────► Business Logic ───► Databa
    - Teacher Login: `Accesspage/teacher_login.php`
 6. **Test**: Use seed scripts like `admin/seed_admin_teacher.php`.
 
-## 📸 Screenshots
+## 📸 Main interface view
 
 <p align="center">
   <img src="images/Screenshot 2026-03-22 211936.png" width="100%" alt="SRIS Dashboard">
