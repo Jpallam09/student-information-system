@@ -1,5 +1,5 @@
 # 📚 Student Records Information System (SRIS) 
-🎓 Capstone Project
+🎓 Self study Project
 
 Bachelor of Science in Information Technology
 
@@ -132,9 +132,9 @@ HTML/CSS/JS ──────────► Business Logic ───► Databa
 
 ## 📸 Screenshots
 
-![Screenshot](images/Screenshot 2026-03-22 211936.png)
+![SRIS Screenshot](images/Screenshot 2026-03-22 211936.png#width=100%)
 
-*(Student/Teacher portals, task management, etc.)*
+*(Displays the main [describe based on filename: likely dashboard or portal UI]. Student/Teacher portals, task management, etc. View in Markdown preview or browser for image display.)*
 
 ## 📁 Project Structure
 
