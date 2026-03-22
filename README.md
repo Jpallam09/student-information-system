@@ -133,7 +133,7 @@ HTML/CSS/JS ──────────► Business Logic ───► Databa
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="Screenshot 2026-03-22 211936.png" width="100%" alt="SRIS Dashboard">
+  <img src="images/Screenshot 2026-03-22 211936.png" width="100%" alt="SRIS Dashboard">
 </p>
 
 <p align="center"><i>Main dashboard interface of the Student Records Information System</i></p>
