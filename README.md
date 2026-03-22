@@ -15,7 +15,7 @@ Bachelor of Science in Information Technology
 - [🏗️ System Architecture](#️-system-architecture)
 - [🛠️ Technologies Used](#️-technologies-used)
 - [⚡ Quick Start](#-quick-start)
-- [📸 Screenshots](#-screenshots)
+- [📸 Main Interface View](#-Main-Interface-View)
 - [📁 Project Structure](#-project-structure)
 - [🤝 Contributing](#-contributing)
 
@@ -130,7 +130,7 @@ HTML/CSS/JS ──────────► Business Logic ───► Databa
    - Teacher Login: `Accesspage/teacher_login.php`
 6. **Test**: Use seed scripts like `admin/seed_admin_teacher.php`.
 
-## 📸 Main interface view
+## 📸 Main Interface View
 
 <p align="center">
   <img src="images/Screenshot 2026-03-22 211936.png" width="100%" alt="SRIS Dashboard">
