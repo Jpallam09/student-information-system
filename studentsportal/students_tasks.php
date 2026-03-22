@@ -972,10 +972,10 @@ document.getElementById('editSubmissionForm').addEventListener('submit', functio
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Submission updated successfully!');
-            location.reload();
+            showStudentNotification(data.message + ' ✅');
+            setTimeout(() => location.reload(), 1500);
         } else {
-            alert('Error: ' + data.message);
+            showStudentNotification('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
