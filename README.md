@@ -132,9 +132,13 @@ HTML/CSS/JS ──────────► Business Logic ───► Databa
 
 ## 📸 Screenshots
 
-![SRIS Screenshot](images/Screenshot 2026-03-22 211936.png#width=100%)
+## 📸 Screenshots
 
-*(Displays the main [describe based on filename: likely dashboard or portal UI]. Student/Teacher portals, task management, etc. View in Markdown preview or browser for image display.)*
+<p align="center">
+  <img src="images/sris-dashboard.png" width="100%" alt="SRIS Dashboard">
+</p>
+
+<p align="center"><i>Main dashboard interface of the Student Records Information System</i></p>
 
 ## 📁 Project Structure
 
