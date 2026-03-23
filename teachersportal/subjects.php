@@ -430,8 +430,24 @@ echo "<p>No classes found for this course.</p>";
     </div>
 </div>
 
+
+<!-- Subject Details Modal -->
+<div id="subjectDetailsModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="subjectModalTitle"><i class="fas fa-info-circle"></i> Subject Details</h2>
+        <div id="subjectModalContent" style="margin-top:20px; line-height:1.6;">
+            Loading...
+        </div>
+        <div class="modal-actions" style="margin-top:20px;">
+            <button type="button" class="btn-outline" onclick="closeSubjectModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 <!-- Students List Modal -->
 <div id="studentListModal" class="modal">
+
     <div class="modal-content">
         <span class="close">&times;</span>
         <h2 id="studentModalTitle">Students in Class</h2>
@@ -484,13 +500,16 @@ document.addEventListener("DOMContentLoaded", function(){
         });
     });
 
-    // Close modals
+// Close ALL modals - universal handler
     document.querySelectorAll(".close").forEach(function(span){
         span.addEventListener("click", function(){ 
-            editModal.style.display = "none";
-            deleteModal.style.display = "none";
+            // Close any open modal with .modal class
+            document.querySelectorAll('.modal').forEach(function(modal){
+                modal.style.display = "none";
+            });
         });
     });
+
 
     // Delete modal specific close buttons
     document.querySelector('.close-delete-modal').addEventListener("click", function(){
@@ -564,10 +583,28 @@ document.getElementById('cancelEditBtn').addEventListener("click", function(){
     window.closeStudentModal = function() {
         studentListModal.style.display = "none";
     };
-    console.log('Student modal JS loaded');
 
-    // Student List Modal handlers
-    var studentListModal = document.getElementById('studentListModal');
+console.log('Student modal JS loaded');
+
+// Subject Details Modal function
+window.openModal = function(subjectName, description) {
+    document.getElementById('subjectModalTitle').textContent = subjectName;
+    document.getElementById('subjectModalContent').innerHTML = 
+        '<p><strong>Description:</strong></p>' +
+        '<p>' + description.replace(/\n/g, '<br>') + '</p>';
+    document.getElementById('subjectDetailsModal').style.display = 'flex';
+};
+
+window.closeSubjectModal = function() {
+    document.getElementById('subjectDetailsModal').style.display = 'none';
+};
+
+// REMOVED: Handled by universal close handlers above
+
+
+// Student List Modal handlers
+var studentListModal = document.getElementById('studentListModal');
+
     document.querySelectorAll('#studentListModal .close').forEach(function(span){
         span.addEventListener("click", function(){
             studentListModal.style.display = "none";

@@ -5,7 +5,6 @@ Bachelor of Science in Information Technology
 
 [![PHP](https://img.shields.io/badge/PHP-7.0%2B-8892BF?style=flat&logo=php&logoColor=white)](https://www.php.net/)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=flat&logo=mysql&logoColor=white)](https://www.mysql.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![XAMPP](https://img.shields.io/badge/XAMPP-8.0%2B-orange?style=flat&logo=apachefriends&logoColor=white)](https://www.apachefriends.org/)
 
 ## 📖 Table of Contents
@@ -163,9 +162,6 @@ Student Info/
 3. Commit: `git commit -m 'Add some AmazingFeature'`
 4. Push: `git push origin feature/AmazingFeature`
 5. Open Pull Request
-
-**License**: MIT License - see [LICENSE](LICENSE) for details.
-
 ---
 
 *Built with ❤️ for educational institutions.*
