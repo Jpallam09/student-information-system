@@ -170,8 +170,9 @@ $classes_query = mysqli_query(
      WHERE c.course_id = '$course_id'
      $class_year_filter
      $class_section_filter
-     GROUP BY c.id, c.section, c.year_level
-     ORDER BY c.section ASC"
+GROUP BY c.id, c.section, c.year_level
+     ORDER BY c.year_level ASC, c.section ASC"
+
 );
 
 ?>
