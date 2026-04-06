@@ -18,7 +18,8 @@
  */
 
 session_start();
-require_once '../config/database.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -100,7 +101,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     if ($insertStmt->execute()) {
         // Redirect to teacher login after registration
-        header("Location: teacher_login.php");
+header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
         exit();
     } else {
         echo "Database Error: " . $conn->error;
@@ -113,7 +114,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>Teacher Registration</title>
-    <link rel="stylesheet" href="../css/register.css">
+<link rel="stylesheet" href="<?php echo asset('css/register.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
@@ -124,7 +125,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <div class="left-panel">
 
         <!-- BACK BUTTON -->
-        <a href="teacher_login.php" class="back-arrow">↩</a>
+<a href="<?php echo BASE_URL; ?>Accesspage/teacher_login.php" class="back-arrow">↩</a>
 
         <div class="icon">📝</div>
         <h2>Teacher Registration</h2>
@@ -142,11 +143,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <input type="text" name="suffix" placeholder="Suffix">
                 <label for="dob">Date of Birth</label>
                 <input type="date" name="dob" required onchange="calculateAge(this)">
-</xai:function_call {
 
-
-
-<xai:function_call name="edit_file">
 <parameter name="path">
                  <input type="number" name="age" placeholder="Age" required>
 

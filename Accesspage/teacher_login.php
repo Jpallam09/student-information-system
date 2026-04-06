@@ -17,7 +17,8 @@
  */
 
 session_start();
-require_once '../config/database.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -48,14 +49,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION['teacher_year_levels'] = $teacher['year_levels'] ?? '';
             $_SESSION['teacher_sections']    = $teacher['sections'] ?? '';
 
-            // ================================ 6. Redirect Based on Teacher Type ================================
+// ================================ 6. Redirect Based on Teacher Type ================================
             if($teacher['teacher_type'] === "Administrator"){
                 // Admin goes to choose program first
-                header("Location: ../teachersportal/chooseSub.php");
+header("Location: " . BASE_URL . "teachersportal/chooseSub.php");
                 exit();
             } else {
-                // Regular teacher goes to dashboard
-                header("Location: ../teachersportal/dashboard.php");
+                // Regular teacher goes directly to dashboard with fixed course
+header("Location: " . BASE_URL . "teachersportal/dashboard.php");
                 exit();
             }
 
@@ -74,14 +75,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>Teacher Login</title>
-    <link rel="stylesheet" href="../css/student.css">
+<link rel="stylesheet" href="<?php echo asset('css/student.css'); ?>">
 </head>
 <body>
 
 <div class="container">
 
     <div class="left-panel">
-        <a href="../index.php" class="back-arrow">↩</a>
+   <a href="<?php echo BASE_URL; ?>index.php" class="back-arrow">↩</a>
         <div class="icon">👤</div>
         <h2>TEACHER LOGIN</h2>
         <p>Please enter your details</p>
@@ -104,7 +105,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             <button type="submit" class="btn">Log In</button>
         </form>
 
-        <p style="margin-top:10px;">Don't have an account? <a href="teachers_register.php">Register Here</a></p>
+        <p style="margin-top:10px;">Don't have an account? <a href="<?php echo BASE_URL; ?>Accesspage/teachers_register.php">Register Here</a></p>
     </div>
 
     <div class="right-panel">

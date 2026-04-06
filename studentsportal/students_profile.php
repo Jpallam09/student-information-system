@@ -1,169 +1,178 @@
 <?php
 session_start();
-include_once __DIR__ . '/../config/database.php';
-include_once __DIR__ . '/../config/paths.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
 
 // ✅ Check if student is logged in
-if(!isset($_SESSION['student_id'])){
-    header("Location: ../Accesspage/student_login.php");
+if (!isset($_SESSION['student_id'])) {
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
     exit();
 }
 
 // ✅ Get student ID
 $student_id = $_SESSION['student_id'];
-if(isset($_GET['id'])){
-    $student_id = $_GET['id'];
+if (isset($_GET['id'])) {
+    $student_id = (int) $_GET['id'];
 }
 
-// ✅ Fetch student info
-$sql = "SELECT * FROM students WHERE id='$student_id'";
-$result = mysqli_query($conn, $sql);
+/* =========================
+   FETCH STUDENT (SAFE)
+========================= */
+$stmt = $conn->prepare("SELECT * FROM students WHERE id = ?");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
 
-if(mysqli_num_rows($result) == 0){
+if ($result->num_rows == 0) {
     die("Student not found.");
 }
 
-$student = mysqli_fetch_assoc($result);
+$student = $result->fetch_assoc();
 
-// ✅ Handle profile picture upload
+/* =========================
+   PROFILE PICTURE UPLOAD
+========================= */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile_picture']) && isset($_FILES['profile_picture'])) {
-$uploadDir = PROFILE_PICS_DIR;
+
+    $uploadDir = PROFILE_PICS_DIR;
+
     if (!ensureWritable($uploadDir)) {
         $_SESSION['upload_error'] = 'Profile pics directory not writable';
-        header("Location: students_profile.php?id=$student_id");
+        header("Location: " . BASE_URL . "studentsportal/students_profile.php?id=" . $student_id);
         exit();
     }
+
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    $maxSize = 2 * 1024 * 1024; // 2MB
-    
+    $maxSize = 2 * 1024 * 1024;
+
     $file = $_FILES['profile_picture'];
+
     if ($file['error'] !== UPLOAD_ERR_OK) {
         $_SESSION['upload_error'] = 'Upload error occurred.';
-        header("Location: students_profile.php?id=$student_id");
+        header("Location: " . BASE_URL . "studentsportal/students_profile.php?id=" . $student_id);
         exit();
     }
-    
+
     $fileTmpName = $file['tmp_name'];
     $fileSize = $file['size'];
-    $fileType = $file['type'];
-    $fileName = $file['name'];
-    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-    
-    $studentIdStr = $student['student_id'] ?? 'student' . $student_id;
-    
+   $finfo = new finfo(FILEINFO_MIME_TYPE);
+$fileType = $finfo->file($fileTmpName);
+    $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
     if (!in_array($fileType, $allowedTypes) || !in_array($fileExt, ['jpg', 'jpeg', 'png'])) {
-        $_SESSION['upload_error'] = 'Invalid file type. Only JPG/PNG allowed.';
-        header("Location: students_profile.php?id=$student_id");
+        $_SESSION['upload_error'] = 'Invalid file type.';
+        header("Location: " . BASE_URL . "studentsportal/students_profile.php?id=" . $student_id);
         exit();
     }
-    
+
     if ($fileSize > $maxSize) {
-        $_SESSION['upload_error'] = 'File too large. Max 2MB.';
-        header("Location: students_profile.php?id=$student_id");
+        $_SESSION['upload_error'] = 'File too large (max 2MB).';
+        header("Location: " . BASE_URL . "studentsportal/students_profile.php?id=" . $student_id);
         exit();
     }
-    
-    $newFileName = $studentIdStr . '_' . time() . '.' . $fileExt;
+
+    $newFileName = 'student_' . $student_id . '_' . time() . '.' . $fileExt;
     $uploadPath = $uploadDir . $newFileName;
-    
+
     if (move_uploaded_file($fileTmpName, $uploadPath)) {
-        // Update DB profile_picture column (primary), fallback profile_image
-        $updateSql = "UPDATE students SET profile_picture = ?, profile_image = ? WHERE id = ?";
-        $stmt = mysqli_prepare($conn, $updateSql);
-        mysqli_stmt_bind_param($stmt, "ssi", $newFileName, $newFileName, $student_id);
-        if (mysqli_stmt_execute($stmt)) {
+
+        $stmt = $conn->prepare("UPDATE students SET profile_picture = ?, profile_image = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $newFileName, $newFileName, $student_id);
+
+        if ($stmt->execute()) {
             $_SESSION['profile_pic_updated'] = true;
         } else {
             $_SESSION['upload_error'] = 'DB update failed.';
-            unlink($uploadPath); // cleanup
+            unlink($uploadPath);
         }
+
     } else {
-        $_SESSION['upload_error'] = 'Failed to upload file.';
+        $_SESSION['upload_error'] = 'Upload failed.';
     }
-    
-    header("Location: students_profile.php?id=$student_id");
+
+    header("Location: " . BASE_URL . "studentsportal/students_profile.php?id=" . $student_id);
     exit();
 }
 
-// ✅ Handle profile update
-if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])){
-    $first_name = mysqli_real_escape_string($conn,$_POST['first_name'] ?? '');
-    $middle_name = mysqli_real_escape_string($conn,$_POST['middle_name'] ?? '');
-    $last_name = mysqli_real_escape_string($conn,$_POST['last_name'] ?? '');
-    $suffix = mysqli_real_escape_string($conn,$_POST['suffix'] ?? '');
-    $dob = $_POST['dob'] ?? '';
-    $age = mysqli_real_escape_string($conn,$_POST['age'] ?? '');
-    $place_of_birth = mysqli_real_escape_string($conn,$_POST['place_of_birth'] ?? '');
-    $gender = $_POST['gender'] ?? '';
-    $civil_status = mysqli_real_escape_string($conn,$_POST['civil_status'] ?? '');
-    $nationality = mysqli_real_escape_string($conn,$_POST['nationality'] ?? '');
-    $religion = mysqli_real_escape_string($conn,$_POST['religion'] ?? '');
-    $student_type = mysqli_real_escape_string($conn,$_POST['student_type'] ?? '');
-    $email = mysqli_real_escape_string($conn,$_POST['email'] ?? '');
-    $mobile = mysqli_real_escape_string($conn,$_POST['mobile'] ?? '');
-    $home_address = mysqli_real_escape_string($conn,$_POST['home_address'] ?? '');
-    $zip_code = mysqli_real_escape_string($conn,$_POST['zip_code'] ?? '');
-    $status = mysqli_real_escape_string($conn,$_POST['status'] ?? '');
+/* =========================
+   UPDATE PROFILE (SAFE)
+========================= */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
 
-    $father_name = mysqli_real_escape_string($conn,$_POST['father_name'] ?? '');
-    $mother_name = mysqli_real_escape_string($conn,$_POST['mother_name'] ?? '');
-    $guardian_name = mysqli_real_escape_string($conn,$_POST['guardian_name'] ?? '');
-    $parent_contact = mysqli_real_escape_string($conn,$_POST['emergency_number'] ?? '');
-    $parent_occupation = mysqli_real_escape_string($conn,$_POST['parent_occupation'] ?? '');
-    $parent_employer = mysqli_real_escape_string($conn,$_POST['parent_employer'] ?? '');
+    $stmt = $conn->prepare("
+        UPDATE students SET
+        first_name=?,
+        middle_name=?,
+        last_name=?,
+        suffix=?,
+        dob=?,
+        age=?,
+        place_of_birth=?,
+        gender=?,
+        civil_status=?,
+        nationality=?,
+        religion=?,
+        student_type=?,
+        email=?,
+        mobile=?,
+        home_address=?,
+        zip_code=?,
+        status=?,
+        father_name=?,
+        mother_name=?,
+        guardian_name=?,
+        parent_contact=?,
+        parent_occupation=?,
+        parent_employer=?,
+        last_school_attended=?,
+        last_school_address=?,
+        blood_type=?,
+        medical_conditions=?,
+        allergies=?
+        WHERE id=?
+    ");
 
-    $last_school_attended = mysqli_real_escape_string($conn,$_POST['last_school_attended'] ?? '');
-    $last_school_address = mysqli_real_escape_string($conn,$_POST['last_school_address'] ?? '');
+    $stmt->bind_param(
+        "ssssssssssssssssssssssssssssi",
+        $_POST['first_name'],
+        $_POST['middle_name'],
+        $_POST['last_name'],
+        $_POST['suffix'],
+        $_POST['dob'],
+        $_POST['age'],
+        $_POST['place_of_birth'],
+        $_POST['gender'],
+        $_POST['civil_status'],
+        $_POST['nationality'],
+        $_POST['religion'],
+        $_POST['student_type'],
+        $_POST['email'],
+        $_POST['mobile'],
+        $_POST['home_address'],
+        $_POST['zip_code'],
+        $_POST['status'],
+        $_POST['father_name'],
+        $_POST['mother_name'],
+        $_POST['guardian_name'],
+        $_POST['emergency_number'],
+        $_POST['parent_occupation'],
+        $_POST['parent_employer'],
+        $_POST['last_school_attended'],
+        $_POST['last_school_address'],
+        $_POST['blood_type'],
+        $_POST['medical_conditions'],
+        $_POST['allergies'],
+        $student_id
+    );
 
-    $blood_type = mysqli_real_escape_string($conn,$_POST['blood_type'] ?? '');
-    $medical_conditions = mysqli_real_escape_string($conn,$_POST['medical_conditions'] ?? '');
-    $allergies = mysqli_real_escape_string($conn,$_POST['allergies'] ?? '');
-
-    $update = "UPDATE students SET
-        first_name='$first_name',
-        middle_name='$middle_name',
-        last_name='$last_name',
-        suffix='$suffix',
-        dob='$dob',
-        age='$age',
-        place_of_birth='$place_of_birth',
-        gender='$gender',
-        civil_status='$civil_status',
-        nationality='$nationality',
-        religion='$religion',
-        student_type='$student_type',
-        email='$email',
-        mobile='$mobile',
-        home_address='$home_address',
-        zip_code='$zip_code',
-        status='$status',
-        father_name='$father_name',
-        mother_name='$mother_name',
-        guardian_name='$guardian_name',
-        parent_contact='$parent_contact',
-        parent_occupation='$parent_occupation',
-        parent_employer='$parent_employer',
-        last_school_attended='$last_school_attended',
-        last_school_address='$last_school_address',
-        blood_type='$blood_type',
-        medical_conditions='$medical_conditions',
-        allergies='$allergies'
-        WHERE id='$student_id'";
-
-    if(mysqli_query($conn, $update)){
+    if ($stmt->execute()) {
         $_SESSION['profile_updated'] = true;
-
-        // ✅ Refetch updated student info so modal shows updated values immediately
-        $result = mysqli_query($conn, "SELECT * FROM students WHERE id='$student_id'");
-        if(mysqli_num_rows($result) > 0){
-            $student = mysqli_fetch_assoc($result);
-        }
-
-header("Location: students_profile.php?id=$student_id");
-exit();
     } else {
-        echo "Error: " . mysqli_error($conn);
+        echo "Error updating profile.";
     }
+
+    header("Location: " . BASE_URL . "studentsportal/students_profile.php?id=" . $student_id);
+    exit();
 }
 ?>
 <!DOCTYPE html>
@@ -171,13 +180,13 @@ exit();
 <head>
     <meta charset="UTF-8">
     <title>Student Profile</title>
-    <link rel="stylesheet" href="../css/studentportal.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>css/studentportal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
 
-<?php include 'students_sidebar.php'; ?>
+<?php include PROJECT_ROOT . '/studentsportal/students_sidebar.php'; ?>
 
 <div id="notification-container">
     <?php if(isset($_SESSION['profile_updated']) && $_SESSION['profile_updated']): ?>
@@ -213,10 +222,11 @@ exit();
         <div class="profile-card">
             <div class="profile-avatar">
                 <?php 
-                $profilePic = $student['profile_picture'] ?? null;
-                $defaultPic = '../images/default-profile.png';
-                $uploadedPic = $profilePic ? '../profile_pics/' . basename($profilePic) : '';
-                $picSrc = ( $profilePic && file_exists($uploadedPic) ) ? $uploadedPic : $defaultPic;
+$profilePic = $student['profile_picture'] ?? null;
+                $defaultPic = BASE_URL . 'images/default-profile.png';
+                $serverPicPath = $profilePic ? PROFILE_PICS_DIR . basename($profilePic) : '';
+                $uploadedPicUrl = $profilePic ? WEB_PROFILE_PICS . basename($profilePic) : '';
+                $picSrc = ($profilePic && file_exists($serverPicPath)) ? $uploadedPicUrl : $defaultPic;
                 ?>
                 <img src="<?= htmlspecialchars($picSrc) ?>" alt="Profile Picture" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
             </div>
@@ -418,11 +428,7 @@ exit();
                 </select>
                 
                 <!-- DOB with hint -->
-                <input type="date" name="dob" value="<?= htmlspecialchars($student['dob'] ?? '') ?>" placeholder="Date of Birth" title="Enter your date of birth (YYYY-MM-DD)" required onchange="calculateAge(this)">
-</xai:function_call >
-
-<xai:function_call name="edit_file">
-<parameter name="path">
+                <input type="date" name="dob" value="<?= htmlspecialchars($student['dob'] ?? '') ?>" placeholder="Date of Birth" title="Enter your date of birth (YYYY-MM-DD)" required onchange="calculateAge(this)">     
 
                 <input type="number" name="age" value="<?= htmlspecialchars($student['age'] ?? '') ?>" placeholder="Age" min="1" max="120" required>
 
@@ -590,22 +596,36 @@ exit();
             <h2 class="modal-title"><i class="fas fa-camera"></i> Upload Profile Picture</h2>
             <form method="POST" enctype="multipart/form-data">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <?php 
-                    $profilePic = $student['profile_picture'] ?? null;
-                    $defaultPic = '../images/default-profile.png';
-                    $uploadedPic = $profilePic ? '../profile_pics/' . basename($profilePic) : '';
-                    $currentPicSrc = ( $profilePic && file_exists($uploadedPic) ) ? $uploadedPic : $defaultPic;
-                    ?>
-                    <img id="currentPicPreview" src="<?= htmlspecialchars($currentPicSrc) ?>" alt="Current Profile Picture" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #10B981;">
+               <?php 
+$profilePic = $student['profile_picture'] ?? null;
+
+// Server path (for checking file)
+$uploadedPicPath = $profilePic 
+    ? PROFILE_PICS_DIR . basename($profilePic) 
+    : '';
+
+// Web URL (for displaying)
+$uploadedPicUrl = $profilePic 
+    ? WEB_PROFILE_PICS . basename($profilePic) 
+    : '';
+
+// Default image
+$defaultPic = WEB_IMAGES . 'default-profile.png';
+
+// Final image
+$picSrc = ($profilePic && file_exists($uploadedPicPath)) 
+    ? $uploadedPicUrl 
+    : $defaultPic;
+?>
+                    <img id="currentPicPreview" src="<?= htmlspecialchars($picSrc) ?>" alt="Current Profile Picture" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #10B981;">
                 </div>
                 <input type="file" name="profile_picture" id="profilePicInput" accept="image/jpeg,image/jpg,image/png" required>
                 <div class="form-buttons">
                     <button type="submit" name="update_profile_picture" class="btn-primary">
                         <i class="fas fa-upload"></i> Upload Picture
                     </button>
-                    <button type="button" class="btn-secondary" onclick="document.getElementById('picUploadModal').style.display='none';document.body.style.overflow='';document.getElementById('profilePicInput').value='';document.getElementById('picPreviewContainer').style.display='none'" style="cursor:pointer;">Cancel</button>
-</xai:function_call >  
-<xai:function_call name="edit_file">
+                    <button type="button" class="btn-secondary" onclick="document.getElementById('picUploadModal').style.display='none';document.body.style.overflow='';document.getElementById('profilePicInput').value='';const preview = document.getElementById('picPreviewContainer');
+if (preview) preview.style.display = 'none';" style="cursor:pointer;">Cancel</button>
                 </div>
             </form>
         </div>
@@ -643,6 +663,21 @@ function calculateAge(dobInput) {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 // Auto-hide notifications - FIXED robust version
+
+function closePicModal() {
+    const modal = document.getElementById('picUploadModal');
+    const preview = document.getElementById('picPreviewContainer');
+
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    if (preview) {
+        preview.style.display = 'none';
+    }
+}
+
     function hideNotifications() {
         // Select ALL notifications by class (handles any count)
         const notifications = document.querySelectorAll('.notification-success, .notification.error');
@@ -701,7 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         openEditBtn.onclick = openEdit;
         document.querySelector('#editProfileModal .close-modal').onclick = closeEdit;
-        document.getElementById('closeProfileModal')?.onclick = closeEdit;
+        // Removed: document.getElementById('closeProfileModal')?.onclick = closeEdit; (non-existent element)
         editModal.onclick = e => e.target === editModal && closeEdit();
     }
 
@@ -720,7 +755,8 @@ document.addEventListener('DOMContentLoaded', function() {
             picModal.style.display = 'none';
             document.body.style.overflow = '';
             picInput.value = '';
-            document.getElementById('picPreviewContainer').style.display = 'none';
+            const preview = document.getElementById('picPreviewContainer');
+if (preview) preview.style.display = 'none';
         };
         openPicBtn.onclick = openPic;
         document.querySelector('#picUploadModal .close-modal').onclick = closePic;

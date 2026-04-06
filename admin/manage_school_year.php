@@ -1,9 +1,10 @@
 <?php
 session_start();
-include '../config/database.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
 
 if (!isset($_SESSION['teacher_id']) || !in_array($_SESSION['teacher_type'], ['Administrator', 'Seeder'])) {
-    header("Location: ../Accesspage/teacher_login.php");
+    header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
     exit();
 }
 
@@ -65,23 +66,11 @@ while ($row = mysqli_fetch_assoc($result)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage School Year | Admin</title>
-    <link rel="stylesheet" href="../css/teacherportal.css">
+<link rel="stylesheet" href="<?php echo asset('css/teacherportal.css'); ?>">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .delete-active { opacity: 0.5; pointer-events: none; }
-        .badge-active { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); padding: 6px 12px; border-radius: var(--radius-md); font-weight: 600; }
-        .badge-inactive { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); padding: 6px 12px; border-radius: var(--radius-md); font-weight: 600; }
-        .badge-red { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); padding: 6px 12px; border-radius: var(--radius-md); font-weight: 600; }
-        .active-display { padding: 20px; background: var(--slate-50); border-radius: var(--radius-md); margin-top: 16px; display: flex; align-items: center; font-size: 1.1rem; }
-        th { position: sticky; top: 0; z-index: 10; }
-        @media (max-width: 768px) { .table-container table, .table-container thead, .table-container tbody, .table-container th, .table-container td, .table-container tr { display: block; } }
-        .message { animation: slideInMessage 0.4s ease-out; }
-        @keyframes slideInMessage { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideOutMessage { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-    </style>
 </head>
 <body>
-<?php include '../teachersportal/sidebar.php'; ?>
+<?php include PROJECT_ROOT . '/teachersportal/sidebar.php'; ?>
 
 <div class="content">
     <div class="announcement-header">

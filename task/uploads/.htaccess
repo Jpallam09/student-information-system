@@ -1,8 +1,0 @@
-# SECURITY: Block PHP execution and dir listing in teacher uploads
-<Files ~ "^.*\.([Pp][Hh][Pp][0-9]|\.[Pp][Hh][Pp])$">
-    Order allow,deny
-    Deny from all
-</Files>
-
-Options -Indexes
-RedirectMatch 403 /\..*$

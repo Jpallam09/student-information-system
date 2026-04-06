@@ -1,9 +1,11 @@
+<?php require_once 'config/paths.php'; ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Student-Teacher Portal</title>
-    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="<?php echo asset('css/index.css'); ?>">
 </head>
 <body>
 
@@ -13,15 +15,15 @@
     <div class="left-panel">
 
         <!-- ICON -->
-        <img src="images/622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 150px; display: block; margin: 100px auto 100px auto; border-radius: 10px; animation: float 3s ease-in-out infinite;">
-
+        <img src="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>" 
+             alt="School Logo" 
+             style="width: 150px; display: block; margin: 100px auto; border-radius: 10px; animation: float 3s ease-in-out infinite;">
 
         <!-- BUTTONS -->
-        <!-- Clicking STUDENT goes to student login -->
-        <a href="Accesspage/student_login.php" class="btn">STUDENT</a>
+        <a href="<?php echo BASE_URL; ?>Accesspage/student_login.php" class="btn">STUDENT</a>
 
-        <!-- Clicking TEACHER goes to teacher login -->
-        <a href="Accesspage/teacher_login.php" class="btn">TEACHER</a>
+        <a href="<?php echo BASE_URL; ?>Accesspage/teacher_login.php" class="btn">TEACHER</a>
+
     </div>
 
     <!-- RIGHT PANEL -->

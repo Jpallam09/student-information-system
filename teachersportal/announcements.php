@@ -1,20 +1,21 @@
 <?php
 session_start();
-include '../config/database.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once CONFIG_PATH . 'database.php';
+require_once CONFIG_PATH . 'teacher_filter.php';
 
 // ================== CHECK LOGIN ==================
 if(!isset($_SESSION['teacher_id'])){
-    header("Location: ../Accesspage/teacher_login.php");
-    exit();
+   header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
+exit();
 }
 
 // ================== DYNAMIC BACK ARROW LOGIC ==================
-$back_url = "../Accesspage/teacher_login.php";
-$admin_types = ['Seeder','Administrator'];
-if(isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types)){
-    $back_url = "../teachersportal/chooseSub.php";
-}
+$back_url = BASE_URL . "Accesspage/teacher_login.php";
 
+if(isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], ['Seeder','Administrator'])){
+    $back_url = BASE_URL . "teachersportal/chooseSub.php";
+}
 // ================== SET COURSE FROM SESSION ==================
 $selected_course = $_SESSION['teacher_course'] ?? '';
 if(empty($selected_course)){
@@ -27,11 +28,12 @@ $teacher_id = $_SESSION['teacher_id'];
 $allowed_courses = ['BSIT','BSED','BAT','BTVTED'];
 if(!in_array(strtoupper($selected_course), $allowed_courses)){
     echo "<p>No course selected. Please go back and choose a course.</p>";
-    echo '<a href="chooseSub.php">← Go Back</a>';
+    echo '<a href="' . BASE_URL . 'teachersportal/chooseSub.php">← Go Back</a>';
     exit();
 }
 
 // ================== CHECK IF USER IS ADMIN ==================
+$admin_types = ['Seeder','Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 
 // ================== ADD / EDIT ANNOUNCEMENT ==================
@@ -58,15 +60,26 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_announcement'])){
                     SET title='$title', content='$content', year_level='$year_level', section='$section', priority='$priority', created_at='$post_date'
                     WHERE id='$id' AND course_id='$course_db'";
         }
-        mysqli_query($conn, $sql) or die("Update Failed: ".mysqli_error($conn));
+        $result = mysqli_query($conn, $sql);
+        if ($result && mysqli_affected_rows($conn) > 0) {
+            $_SESSION['success_message'] = 'Announcement updated successfully!';
+        } else {
+            $_SESSION['error_message'] = 'Failed to update announcement: ' . mysqli_error($conn);
+        }
     } else {
         $sql = "INSERT INTO announcements (teacher_id, course_id, title, content, year_level, section, priority, created_at)
                 VALUES ('$teacher_id', '$course_db', '$title', '$content', '$year_level', '$section', '$priority', '$post_date')";
-        mysqli_query($conn, $sql) or die("Insert Failed: ".mysqli_error($conn));
+        $result = mysqli_query($conn, $sql);
+        if ($result && mysqli_affected_rows($conn) > 0) {
+            $_SESSION['success_message'] = 'Announcement added successfully!';
+        } else {
+            $_SESSION['error_message'] = 'Failed to add announcement: ' . mysqli_error($conn);
+        }
     }
 
-    header("Location: announcements.php");
-    exit();
+    header("Location: " . BASE_URL . "teachersportal/announcements.php");
+exit();
+
 }
 
 // ================== DELETE ==================
@@ -74,15 +87,24 @@ if(isset($_GET['delete'])){
     $id = intval($_GET['delete']);
     if ($is_admin) {
         // Admin can delete any announcement
-        mysqli_query($conn, "DELETE FROM announcements WHERE id='$id'") 
-            or die("Delete Failed: ".mysqli_error($conn));
+        $result = mysqli_query($conn, "DELETE FROM announcements WHERE id='$id'");
+        if ($result && mysqli_affected_rows($conn) > 0) {
+            $_SESSION['success_message'] = 'Announcement deleted successfully!';
+        } else {
+            $_SESSION['error_message'] = 'Failed to delete announcement or no permission.';
+        }
     } else {
         // Regular teacher can delete any announcement in their course
-        mysqli_query($conn, "DELETE FROM announcements WHERE id='$id' AND course_id='$selected_course'") 
-            or die("Delete Failed: ".mysqli_error($conn));
+        $result = mysqli_query($conn, "DELETE FROM announcements WHERE id='$id' AND course_id='$selected_course'");
+        if ($result && mysqli_affected_rows($conn) > 0) {
+            $_SESSION['success_message'] = 'Announcement deleted successfully!';
+        } else {
+            $_SESSION['error_message'] = 'Failed to delete announcement or no permission.';
+        }
     }
-    header("Location: announcements.php");
-    exit();
+    header("Location: " . BASE_URL . "teachersportal/announcements.php");
+exit();
+
 }
 
 // ================== PIN/UNPIN ==================
@@ -107,15 +129,16 @@ if(isset($_GET['toggle_pin'])){
 
 // ================== FETCH ANNOUNCEMENTS ==================
 // Admin sees ALL announcements; regular teacher sees only their course
-include '../config/teacher_filter.php';
 
 $admin_types = ['Seeder','Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 $teacher_year_filter = '';
 $teacher_section_filter = '';
 if (!$is_admin) {
-    $teacher_year_filter = getYearLevelFilter('a.year_level');
-    $teacher_section_filter = getSectionFilter('a.section');
+    $y_params = []; $y_types = '';
+    $teacher_year_filter = getYearLevelFilter('year_level', $y_params, $y_types);
+    $s_params = []; $s_types = '';
+    $teacher_section_filter = getSectionFilter('section', $s_params, $s_types);
 }
 
 if ($is_admin) {
@@ -180,10 +203,26 @@ $priorityLevels = ['low','medium','high'];
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-<?php include 'sidebar.php'; ?>
+<?php include path('teachersportal/sidebar.php'); ?>
 
-<div class="content">
+    <div class="content">
+        
+        <?php
+        // Flash notifications
+        if (isset($_SESSION['success_message'])) {
+            echo '<div class="alert alert-success" id="successAlert">' . htmlspecialchars($_SESSION['success_message']) . '
+            </div>';
+            unset($_SESSION['success_message']);
+        }
+        if (isset($_SESSION['error_message'])) {
+            echo '<div class="alert alert-error" id="errorAlert">' . htmlspecialchars($_SESSION['error_message']) . '
+            </div>';
+            unset($_SESSION['error_message']);
+        }
+        ?>
+
     <div class="announcement-header">
+
         <?php if ($is_admin): ?>
         <h1><i class="fas fa-bullhorn"></i> All Announcements</h1>
         <?php else: ?>
@@ -399,8 +438,11 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById('announcement_id').value = card.dataset.id;
             document.getElementById('announcement_title').value = card.dataset.title;
             document.getElementById('announcement_content').value = card.dataset.content;
-            document.getElementById('announcement_year_level').value = card.dataset.year_level;
-            document.getElementById('announcement_section').value = card.dataset.section;
+            const yearLevelEl = document.getElementById('announcement_year_level');
+            if (yearLevelEl) yearLevelEl.value = card.dataset.year_level;
+            
+            const sectionEl = document.getElementById('announcement_section');
+            if (sectionEl) sectionEl.value = card.dataset.section;
             document.getElementById('announcement_priority').value = card.dataset.priority ?? 'medium';
             const date = new Date(card.dataset.date);
             document.getElementById('announcement_date').value = date.toISOString().slice(0,16);
@@ -437,6 +479,26 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 });
-</script>
+        
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                alert.style.transition = 'opacity 0.3s ease-out';
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 300);
+            });
+        }, 5000);
+
+        // Manual close alert
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('alert-close')) {
+                const alert = e.target.closest('.alert');
+                alert.style.transition = 'opacity 0.3s ease-out';
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 300);
+            }
+        });
+    </script>
 </body>
 </html>

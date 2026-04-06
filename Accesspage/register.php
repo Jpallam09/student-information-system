@@ -6,8 +6,9 @@
  */
 
 session_start();
-require_once '../config/database.php';
-include_once '../config/current_school_year.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
+include_once PROJECT_ROOT . '/config/current_school_year.php';
 $active_year = getActiveSchoolYear($conn) ?? '';
 $active_sem = getActiveSemester($conn) ?? '';
 
@@ -99,7 +100,7 @@ $insertStmt = $conn->prepare("
 // - 'i' for integer (age is integer)
 // So: 36 's' + 1 'i' = 37 characters
 $insertStmt->bind_param(
-    "ssssssissssssssssssssssssssssssssssss", // Added one more 's' at the end
+    "ssssssisssssssssssssssssssssssssssssss",
     $student_id, $first_name, $middle_name, $last_name, $suffix,
     $dob, $age, $place_of_birth, $gender, $civil_status, $nationality, $religion, $student_type,
     $course, $year_level, $section, $school_year, $semester,
@@ -112,9 +113,9 @@ $insertStmt->bind_param(
 );
     if ($insertStmt->execute()) {
         if ($from === 'teacher') {
-            header("Location: ../teachersportal/students.php");
+header("Location: " . BASE_URL . "teachersportal/students.php");
         } else {
-            header("Location: student_login.php");
+header("Location: " . BASE_URL . "Accesspage/student_login.php");
         }
         exit();
     } else {
@@ -127,7 +128,7 @@ $insertStmt->bind_param(
 <head>
 <meta charset="UTF-8">
 <title>Student Registration</title>
-<link rel="stylesheet" href="../css/register.css">
+<link rel="stylesheet" href="<?php echo asset('css/register.css'); ?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>
 <body>
@@ -135,7 +136,7 @@ $insertStmt->bind_param(
 <div class="container">
 <div class="left-panel">
 
-<a href="<?php echo ($from === 'teacher') ? '../teachersportal/students.php' : 'student_login.php'; ?>" class="back-arrow">↩</a>
+<a href="<?php echo ($from === 'teacher') ? BASE_URL . 'teachersportal/students.php'   : BASE_URL . 'Accesspage/student_login.php'; ?>" class="back-arrow">↩</a>
 
 <div class="icon">📝</div>
 <h2>Student Registration</h2>

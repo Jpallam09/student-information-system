@@ -1,7 +1,15 @@
 <?php
 session_start();
-include '../config/database.php';
-include '../config/teacher_filter.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
+
+// ================== CHECK LOGIN ==================
+if(!isset($_SESSION['teacher_id'])){
+    header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
+    exit();
+}
+
+require_once PROJECT_ROOT . '/config/teacher_filter.php';
 
 // ================== BUILD TEACHER FILTER ==================
 $teacher_year_filter = '';
@@ -9,26 +17,19 @@ $teacher_section_filter = '';
 $admin_types = ['Seeder','Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 if (!$is_admin) {
-    $teacher_year_filter = getYearLevelFilter('year_level');
-$teacher_section_filter = getSectionFilter('section');
+    $y_params = []; $y_types = '';
+    $teacher_year_filter = getCombinedYearFilter('year_level', $y_params, $y_types);
+    $s_params = []; $s_types = '';
+    $teacher_section_filter = getCombinedSectionFilter('section', $s_params, $s_types);
 }
 
 $teacher_year_levels = !$is_admin ? getTeacherYearLevels() : ['1st Year','2nd Year','3rd Year','4th Year'];
 
-
-
-
-// ================== CHECK LOGIN ==================
-if(!isset($_SESSION['teacher_id'])){
-    header("Location: ../Accesspage/teacher_login.php");
-    exit();
-}
-
 // ================== DYNAMIC BACK ARROW LOGIC ==================
-$back_url = "../Accesspage/teacher_login.php";
-$admin_types = ['Seeder','Administrator'];
-if(isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types)){
-    $back_url = "../teachersportal/chooseSub.php";
+$back_url = BASE_URL . "Accesspage/teacher_login.php";
+
+if (isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], ['Seeder','Administrator'])) {
+    $back_url = BASE_URL . "teachersportal/chooseSub.php";
 }
 
 // ================== SET COURSE FROM SESSION ==================
@@ -43,7 +44,7 @@ $teacher_id = $_SESSION['teacher_id'];
 $allowed_courses = ['BSIT','BSED','BAT','BTVTED'];
 if(!in_array(strtoupper($selected_course), $allowed_courses)){
     echo "<p>No course selected. Please go back and choose a course.</p>";
-    echo '<a href="chooseSub.php">← Go Back</a>';
+    echo '<a href="' . BASE_URL . 'teachersportal/chooseSub.php">← Go Back</a>';
     exit();
 }
 
@@ -64,10 +65,16 @@ $stmt->close();
 $selected_year = $_GET['year_level'] ?? '';
 $selected_section = $_GET['section'] ?? '';
 
-// ================== FETCH AVAILABLE SECTIONS ================== (PREPARED)
+// ================== FETCH AVAILABLE SECTIONS ==================
 $section_sql_base = "SELECT DISTINCT section FROM students WHERE course=? $teacher_year_filter";
 $params_sec = [$selected_course];
 $types_sec = "s";
+
+// ⬇️ ADD THIS - merge teacher year filter params
+if (!$is_admin && !empty($y_params)) {
+    $params_sec = array_merge($params_sec, $y_params);
+    $types_sec .= $y_types;
+}
 
 if(!empty($selected_year)){
     $section_sql_base .= " AND year_level=?";
@@ -85,7 +92,6 @@ while($row = $sections_result->fetch_assoc()){
     $available_sections[] = $row['section'];
 }
 $stmt->close();
-
 // ================== SAVE GRADES ================== (LOOP PREPARED)
 if(isset($_POST['save'])){
 
@@ -132,7 +138,7 @@ if(isset($_POST['save'])){
                 $stmt_update = $conn->prepare("UPDATE grades SET 
                     quiz=?, homework=?, activities=?, prelim=?, midterm=?, final=?, lab=?, percentage=?, letter_grade=?
                     WHERE student_id=? AND subject_id=?");
-                $stmt_update->bind_param("dddddddiss", $quiz, $homework, $activities, $prelim, $midterm, $final, $lab, $percentage, $grade, $student_id, $subject_id);
+                $stmt_update->bind_param("dddddddissi", $quiz, $homework, $activities, $prelim, $midterm, $final, $lab, $percentage, $grade, $student_id, $subject_id);
                 $stmt_update->execute();
                 $stmt_update->close();
 
@@ -150,15 +156,67 @@ if(isset($_POST['save'])){
 
         $message = "Grades and GPA successfully saved!";
 
+        // ========== UPDATE STUDENT GPA ==========
+        // Get unique students from POST to update their gpa
+        $unique_students = array_unique($_POST['student_id']);
+        foreach($unique_students as $stu_id) {
+            $stu_id = intval($stu_id);
+            
+            // Calc GPA same way as display
+            $stmt_gpa_calc = $conn->prepare("SELECT quiz, homework, activities, prelim, midterm, final, lab FROM grades WHERE student_id=?");
+            $stmt_gpa_calc->bind_param("i", $stu_id);
+            $stmt_gpa_calc->execute();
+            $gpa_res = $stmt_gpa_calc->get_result();
+            
+            $gpa_sum = 0;
+            $gpa_count = $gpa_res->num_rows;
+            while($g = $gpa_res->fetch_assoc()) {
+                $total = ($g['quiz']*0.10)+($g['homework']*0.10)+($g['activities']*0.10)+
+                        ($g['prelim']*0.20)+($g['midterm']*0.20)+($g['final']*0.30)+($g['lab']*0.20);
+                if($total>=60) $gpa_points=1.0;
+                elseif($total>=55) $gpa_points=1.25;
+                elseif($total>=50) $gpa_points=1.5;
+                elseif($total>=45) $gpa_points=1.75;
+                elseif($total>=40) $gpa_points=2.0;
+                elseif($total>=35) $gpa_points=2.25;
+                elseif($total>=30) $gpa_points=2.5;
+                elseif($total>=25) $gpa_points=2.75;
+                elseif($total>=20) $gpa_points=3.0;
+                else $gpa_points=5.0;
+                $gpa_sum += $gpa_points;
+            }
+            $stmt_gpa_calc->close();
+            
+            $final_gpa = $gpa_count > 0 ? round($gpa_sum / $gpa_count, 2) : 0.0;
+            
+            // Update students table gpa
+            $stmt_update_gpa = $conn->prepare("UPDATE students SET gpa=? WHERE id=?");
+            $stmt_update_gpa->bind_param("di", $final_gpa, $stu_id);
+            $stmt_update_gpa->execute();
+            $stmt_update_gpa->close();
+        }
+
     } else {
         $message = "No subjects found for the selected students. Nothing to save.";
     }
 }
 
-// ================== FETCH STUDENTS ================== (PREPARED)
+// ================== FETCH STUDENTS ==================
 $students_base_sql = "SELECT * FROM students WHERE course=? $teacher_year_filter $teacher_section_filter";
 $params_stu = [$selected_course];
 $types_stu = "s";
+
+// ⬇️ ADD THIS - merge teacher filter params
+if (!$is_admin) {
+    if (!empty($y_params)) {
+        $params_stu = array_merge($params_stu, $y_params);
+        $types_stu .= $y_types;
+    }
+    if (!empty($s_params)) {
+        $params_stu = array_merge($params_stu, $s_params);
+        $types_stu .= $s_types;
+    }
+}
 
 if ($selected_year) {
     $students_base_sql .= " AND year_level=?";
@@ -178,7 +236,6 @@ $stmt_stu->execute();
 $students_query = $stmt_stu->get_result();
 $stmt_stu->close();
 
-
 // Keep expanded students after saving
 $keep_open_ids = [];
 if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0])){
@@ -192,11 +249,11 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grades - <?= htmlspecialchars($selected_course) ?></title>
-<link rel="stylesheet" href="../css/teacherportal.css">
+<link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-<?php include 'sidebar.php'; ?>
+<?php include PROJECT_ROOT . '/teachersportal/sidebar.php'; ?>
 
 <div class="content">
     <h1><i class="fas fa-chart-line"></i> <?= htmlspecialchars($selected_course) ?> Grades Management</h1>
@@ -346,24 +403,28 @@ $stmt_grade->close();
 
                                 <!-- GPA Calculation -->
                                 <?php
-                                $grades_for_gpa = mysqli_query($conn, "SELECT quiz, homework, activities, prelim, midterm, final, lab FROM grades WHERE student_id='{$student['id']}'");
-                                $total_score_sum = 0;
-                                $subject_count = mysqli_num_rows($grades_for_gpa);
+$stmt_gpa = $conn->prepare("SELECT quiz, homework, activities, prelim, midterm, final, lab FROM grades WHERE student_id=?");
+                                    $stmt_gpa->bind_param("i", $student['id']);
+                                    $stmt_gpa->execute();
+                                    $gpa_result = $stmt_gpa->get_result();
+                                    $total_score_sum = 0;
+                                    $subject_count = $gpa_result->num_rows;
 
-                                while($g_row = mysqli_fetch_assoc($grades_for_gpa)){
-                                    $total_grade = ($g_row['quiz']*0.10)+($g_row['homework']*0.10)+($g_row['activities']*0.10)+($g_row['prelim']*0.20)+($g_row['midterm']*0.20)+($g_row['final']*0.30)+($g_row['lab']*0.20);
-                                    if($total_grade>=60) $gpa_points=1.0;
-                                    elseif($total_grade>=55) $gpa_points=1.25;
-                                    elseif($total_grade>=50) $gpa_points=1.5;
-                                    elseif($total_grade>=45) $gpa_points=1.75;
-                                    elseif($total_grade>=40) $gpa_points=2.0;
-                                    elseif($total_grade>=35) $gpa_points=2.25;
-                                    elseif($total_grade>=30) $gpa_points=2.5;
-                                    elseif($total_grade>=25) $gpa_points=2.75;
-                                    elseif($total_grade>=20) $gpa_points=3.0;
-                                    else $gpa_points=5.0;
-                                    $total_score_sum += $gpa_points;
-                                }
+                                    while($g_row = $gpa_result->fetch_assoc()){
+                                        $total_grade = ($g_row['quiz']*0.10)+($g_row['homework']*0.10)+($g_row['activities']*0.10)+($g_row['prelim']*0.20)+($g_row['midterm']*0.20)+($g_row['final']*0.30)+($g_row['lab']*0.20);
+                                        if($total_grade>=60) $gpa_points=1.0;
+                                        elseif($total_grade>=55) $gpa_points=1.25;
+                                        elseif($total_grade>=50) $gpa_points=1.5;
+                                        elseif($total_grade>=45) $gpa_points=1.75;
+                                        elseif($total_grade>=40) $gpa_points=2.0;
+                                        elseif($total_grade>=35) $gpa_points=2.25;
+                                        elseif($total_grade>=30) $gpa_points=2.5;
+                                        elseif($total_grade>=25) $gpa_points=2.75;
+                                        elseif($total_grade>=20) $gpa_points=3.0;
+                                        else $gpa_points=5.0;
+                                        $total_score_sum += $gpa_points;
+                                    }
+                                    $stmt_gpa->close();
 
                                 $display_gpa = ($subject_count>0) ? round($total_score_sum/$subject_count,2) : 0;
                                 ?>

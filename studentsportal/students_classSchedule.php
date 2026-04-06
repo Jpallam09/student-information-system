@@ -1,111 +1,170 @@
 <?php
 session_start();
-include '../config/database.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
 
-// --- SESSION CHECK ---
-if(!isset($_SESSION['student_id'])){
-    header("Location: ../Accesspage/student_login.php");
+/* ============================================================
+   SESSION CHECK
+============================================================ */
+if (!isset($_SESSION['student_id'])) {
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
     exit();
 }
 
 $student_id = $_SESSION['student_id'];
 
-// --- FETCH STUDENT INFO ---
-$student_query = mysqli_query($conn, "
+/* ============================================================
+   FETCH STUDENT INFO (SAFE)
+============================================================ */
+$stmt = $conn->prepare("
     SELECT course, year_level, section
     FROM students 
-    WHERE id='$student_id'
-") or die(mysqli_error($conn));
+    WHERE id = ?
+");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$student = $result->fetch_assoc();
 
-if(mysqli_num_rows($student_query) == 0){
+if (!$student) {
     die("Student not found.");
 }
 
-$student = mysqli_fetch_assoc($student_query);
 $student_course  = $student['course'];
 $student_year    = $student['year_level'];
 $student_section = $student['section'];
 
-// --- GET COURSE ID ---
-$course_result = mysqli_query($conn, "SELECT id FROM courses WHERE course_name='$student_course'");
-if(!$course_result || mysqli_num_rows($course_result) == 0){
+/* ============================================================
+   GET COURSE ID (SAFE + PREPARED)
+============================================================ */
+$stmt = $conn->prepare("
+    SELECT id 
+    FROM courses 
+    WHERE course_name = ?
+");
+$stmt->bind_param("s", $student_course);
+$stmt->execute();
+$course_result = $stmt->get_result();
+
+if (!$course_result || $course_result->num_rows == 0) {
     die("Course not found in database.");
 }
-$course_row = mysqli_fetch_assoc($course_result);
-$course_id = $course_row['id'];
 
-// --- FETCH MANUAL SCHEDULES ---
-$schedule_query = mysqli_query($conn, "
+$course_row = $course_result->fetch_assoc();
+$course_id  = $course_row['id'];
+
+/* ============================================================
+   FETCH MANUAL SCHEDULES
+============================================================ */
+$stmt = $conn->prepare("
     SELECT * 
     FROM schedules
-    WHERE course='$student_course'
-      AND year_level='$student_year'
-      AND section='$student_section'
+    WHERE course = ?
+      AND year_level = ?
+      AND section = ?
     ORDER BY FIELD(day,'Monday','Tuesday','Wednesday','Thursday','Friday'), time_start
-") or die(mysqli_error($conn));
+");
+$stmt->bind_param("sss", $student_course, $student_year, $student_section);
+$stmt->execute();
+$result = $stmt->get_result();
 
 $schedules = [];
-while($row = mysqli_fetch_assoc($schedule_query)){
+
+while ($row = $result->fetch_assoc()) {
     $schedules[$row['day']][] = [
-        'id' => $row['id'],
-        'subject' => $row['subject'],
-        'year_level' => $row['year_level'],
-        'section' => $row['section'],
-        'day' => $row['day'],
-        'time_start' => $row['time_start'],
-        'time_end' => $row['time_end'],
-        'room' => $row['room'],
-        'type' => 'Manual'
+        'id'          => $row['id'],
+        'subject'     => $row['subject'],
+        'year_level'  => $row['year_level'],
+        'section'     => $row['section'],
+        'day'         => $row['day'],
+        'time_start'  => $row['time_start'],
+        'time_end'    => $row['time_end'],
+        'room'        => $row['room'],
+        'type'        => 'Manual'
     ];
 }
 
-// --- FETCH SUBJECTS ADDED VIA addsubject.php ---
-// Fixed: use course_id instead of course name
-$subjects_query = mysqli_query($conn, "
+/* ============================================================
+   FETCH SUBJECTS (ADDED VIA SYSTEM)
+============================================================ */
+$stmt = $conn->prepare("
     SELECT * 
     FROM subjects 
-    WHERE course_id='$course_id'
-      AND year_level='$student_year'
-      AND (section IS NULL OR section='' OR section='$student_section')
-") or die(mysqli_error($conn));
+    WHERE course_id = ?
+      AND year_level = ?
+      AND (section IS NULL OR section = '' OR section = ?)
+");
+$stmt->bind_param("iss", $course_id, $student_year, $student_section);
+$stmt->execute();
+$result = $stmt->get_result();
 
-while($row = mysqli_fetch_assoc($subjects_query)){
+while ($row = $result->fetch_assoc()) {
     $schedules[$row['day']][] = [
-        'id' => 'sub'.$row['id'],
-        'subject' => $row['subject_name'],
-        'year_level' => $row['year_level'],
-        'section' => $row['section'] ?? '',
-        'day' => $row['day'],
-        'time_start' => $row['time_start'],
-        'time_end' => $row['time_end'],
-        'room' => $row['room'],
-        'type' => 'Subject'
+        'id'          => 'sub' . $row['id'],
+        'subject'     => $row['subject_name'],
+        'year_level'  => $row['year_level'],
+        'section'     => $row['section'] ?? '',
+        'day'         => $row['day'],
+        'time_start'  => $row['time_start'],
+        'time_end'    => $row['time_end'],
+        'room'        => $row['room'],
+        'type'        => 'Subject'
     ];
 }
 
-// --- CONFIG ---
+/* ============================================================
+   TIME CONFIG
+============================================================ */
+date_default_timezone_set('Asia/Manila');
+
 $days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
 $currentDay = date('l');
 $currentTime = date('H:i:s');
 
-// --- STATS ---
-$classes_today = isset($schedules[$currentDay]) ? count($schedules[$currentDay]) : 0;
-$total_classes = 0;
-$next_class = null;
+$current = strtotime($currentTime);
+if ($current === false) {
+    $current = time(); // fallback
+}
 
-foreach($schedules as $day => $day_classes){
+/* ============================================================
+   STATS
+============================================================ */
+$classes_today = isset($schedules[$currentDay]) ? count($schedules[$currentDay]) : 0;
+
+$total_classes = 0;
+foreach ($schedules as $day_classes) {
     $total_classes += count($day_classes);
 }
 
-// --- NEXT CLASS LOGIC ---
-if(isset($schedules[$currentDay])){
-    foreach($schedules[$currentDay] as $class){
-        if($currentTime >= $class['time_start'] && $currentTime <= $class['time_end']){
+/* ============================================================
+   NEXT CLASS LOGIC
+============================================================ */
+$next_class = null;
+
+if (isset($schedules[$currentDay])) {
+    foreach ($schedules[$currentDay] as $class) {
+
+        // Skip invalid data
+        if (empty($class['time_start']) || empty($class['time_end'])) {
+            continue;
+        }
+
+        $start = strtotime($class['time_start']);
+        $end   = strtotime($class['time_end']);
+
+        if ($start === false || $end === false) {
+            continue;
+        }
+
+        // Ongoing
+        if ($current >= $start && $current <= $end) {
             $class['status'] = "Ongoing";
             $next_class = $class;
             break;
         }
-        if($class['time_start'] > $currentTime){
+
+        // Upcoming
+        if ($start > $current) {
             $class['status'] = "Upcoming";
             $next_class = $class;
             break;
@@ -113,12 +172,21 @@ if(isset($schedules[$currentDay])){
     }
 }
 
-// Check next days if none today
-if(!$next_class){
-    $currentIndex = array_search($currentDay,$days);
-    for($i=$currentIndex+1;$i<count($days);$i++){
+/* ============================================================
+   SEARCH NEXT DAYS
+============================================================ */
+if (!$next_class) {
+
+    $currentIndex = array_search($currentDay, $days);
+
+    if ($currentIndex === false) {
+        $currentIndex = 0;
+    }
+
+    for ($i = $currentIndex + 1; $i < count($days); $i++) {
         $nextDay = $days[$i];
-        if(isset($schedules[$nextDay])){
+
+        if (!empty($schedules[$nextDay])) {
             $next_class = $schedules[$nextDay][0];
             $next_class['status'] = "Upcoming";
             break;
@@ -126,10 +194,12 @@ if(!$next_class){
     }
 }
 
-// Loop back to Monday if still none
-if(!$next_class){
-    foreach($days as $day){
-        if(isset($schedules[$day])){
+/* ============================================================
+   LOOP BACK TO MONDAY
+============================================================ */
+if (!$next_class) {
+    foreach ($days as $day) {
+        if (!empty($schedules[$day])) {
             $next_class = $schedules[$day][0];
             $next_class['status'] = "Upcoming";
             break;
@@ -141,12 +211,12 @@ if(!$next_class){
 <html>
 <head>
     <title>Class Schedule - <?= htmlspecialchars($student_course) ?></title>
-    <link rel="stylesheet" href="../css/studentportal.css">
+   <link rel="stylesheet" href="<?php echo asset('css/studentportal.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
-<?php include 'students_sidebar.php'; ?>
+<?php include PROJECT_ROOT . '/studentsportal/students_sidebar.php'; ?>
 
 <div class="main-content">
 
@@ -194,7 +264,7 @@ if(!$next_class){
     ?>
         <div class="card schedule-day <?= $isToday ? 'today-card' : '' ?>">
             <div class="card-header">
-                <h3><?= $day ?> <?php if($isToday) echo '<span class="badge badge-blue">Today</span>'; ?></h3>
+                <h3><?= htmlspecialchars($day) ?> <?php if($isToday) echo '<span class="badge badge-blue">Today</span>'; ?></h3>
                 <p><?= isset($schedules[$day]) ? count($schedules[$day]) : 0 ?> classes scheduled</p>
             </div>
             <div class="card-content">

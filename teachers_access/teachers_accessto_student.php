@@ -1,90 +1,111 @@
 <?php
 session_start();
-include '../config/database.php';
-include_once '../config/current_school_year.php';
-$active_year = getActiveSchoolYear($conn) ?? '';
-$active_sem = getActiveSemester($conn) ?? '';
 
+/* ============================================================
+   PRODUCTION PATH + DATABASE
+   ============================================================ */
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
+require_once PROJECT_ROOT . '/config/current_school_year.php';
+
+/* ============================================================
+   ACTIVE SCHOOL YEAR / SEM
+   ============================================================ */
+$active_year = getActiveSchoolYear($conn) ?? '';
+$active_sem  = getActiveSemester($conn) ?? '';
+
+/* ============================================================
+   AUTH CHECK
+   ============================================================ */
 if (!isset($_SESSION['teacher_id'])) {
-    header("Location: ../Accesspage/teacher_login.php");
+    header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
     exit();
 }
 
-// Check if user is admin (Administrator or Seeder)
+/* ============================================================
+   ADMIN CHECK
+   ============================================================ */
 $admin_types = ['Seeder', 'Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 
+/* ============================================================
+   GET STUDENT ID
+   ============================================================ */
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     echo "No student selected.";
     exit();
 }
 
-$student_id = mysqli_real_escape_string($conn, $_GET['id']);
+$student_id = intval($_GET['id']);
 
-$result = mysqli_query($conn, "SELECT * FROM students WHERE id='$student_id'");
-if (mysqli_num_rows($result) == 0) {
+/* ============================================================
+   FETCH STUDENT (PREPARED STATEMENT)
+   ============================================================ */
+$stmt = $conn->prepare("SELECT * FROM students WHERE id = ?");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
     echo "Student not found.";
     exit();
 }
-$student = mysqli_fetch_assoc($result);
 
+$student = $result->fetch_assoc();
+
+/* ============================================================
+   MESSAGES
+   ============================================================ */
 $success_msg = $error_msg = $no_change_msg = "";
 
+/* ============================================================
+   DELETE STUDENT
+   ============================================================ */
 if (isset($_POST['delete_student'])) {
-    mysqli_begin_transaction($conn);
+    $conn->begin_transaction();
+
     try {
-        $delete_attendance = "DELETE FROM attendance WHERE student_id='$student_id'";
-        mysqli_query($conn, $delete_attendance);
-        $delete_student = "DELETE FROM students WHERE id='$student_id'";
-        mysqli_query($conn, $delete_student);
-        mysqli_commit($conn);
-        header("Location: ../teachersportal/students.php?msg=deleted");
+        $stmt1 = $conn->prepare("DELETE FROM attendance WHERE student_id = ?");
+        $stmt1->bind_param("i", $student_id);
+        $stmt1->execute();
+
+        $stmt2 = $conn->prepare("DELETE FROM students WHERE id = ?");
+        $stmt2->bind_param("i", $student_id);
+        $stmt2->execute();
+
+        $conn->commit();
+
+        header("Location: " . BASE_URL . "teachersportal/students.php?msg=deleted");
         exit();
+
     } catch (Exception $e) {
-        mysqli_rollback($conn);
+        $conn->rollback();
         $error_msg = "Error deleting student: " . $e->getMessage();
     }
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
-    $new_data = [
-        'first_name' => $_POST['first_name'],
-        'middle_name' => $_POST['middle_name'],
-        'last_name' => $_POST['last_name'],
-        'suffix' => $_POST['suffix'],
-        'dob' => $_POST['dob'],
-        'gender' => $_POST['gender'],
-        'civil_status' => $_POST['civil_status'],
-        'nationality' => $_POST['nationality'],
-        'course' => $_POST['course'],
-        'year_level' => $_POST['year_level'],
-        'section' => $_POST['section'],
-        'school_year' => $_POST['school_year'],
-        'semester' => $_POST['semester'],
-        'email' => $_POST['email'],
-        'mobile' => $_POST['mobile'],
-        'home_address' => $_POST['home_address'],
-        'emergency_person' => $_POST['emergency_person'],
-        'emergency_number' => $_POST['emergency_number'],
-        'age' => $_POST['age'],
-        'place_of_birth' => $_POST['place_of_birth'],
-        'religion' => $_POST['religion'],
-        'student_type' => $_POST['student_type'],
-        'status' => $_POST['status'],
-        'last_school_attended' => $_POST['last_school_attended'],
-        'last_school_address' => $_POST['last_school_address'],
-        'zip_code' => $_POST['zip_code'],
-        'father_name' => $_POST['father_name'],
-        'mother_name' => $_POST['mother_name'],
-        'guardian_name' => $_POST['guardian_name'],
-        'parent_contact' => $_POST['parent_contact'],
-        'parent_occupation' => $_POST['parent_occupation'],
-        'parent_employer' => $_POST['parent_employer'],
-        'blood_type' => $_POST['blood_type'],
-        'medical_conditions' => $_POST['medical_conditions'],
-        'allergies' => $_POST['allergies']
+/* ============================================================
+   UPDATE STUDENT
+   ============================================================ */
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['update_student'])) {
+
+    $fields = [
+        'first_name','middle_name','last_name','suffix','dob','gender',
+        'civil_status','nationality','course','year_level','section',
+        'school_year','semester','email','mobile','home_address',
+        'emergency_person','emergency_number','age','place_of_birth',
+        'religion','student_type','status','last_school_attended',
+        'last_school_address','zip_code','father_name','mother_name',
+        'guardian_name','parent_contact','parent_occupation',
+        'parent_employer','blood_type','medical_conditions','allergies'
     ];
 
+    $new_data = [];
+    foreach ($fields as $field) {
+        $new_data[$field] = $_POST[$field] ?? '';
+    }
+
+    /* Check changes */
     $changed = false;
     foreach ($new_data as $key => $value) {
         if ($student[$key] != $value) {
@@ -94,24 +115,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
     }
 
     if ($changed) {
+
         $set_parts = [];
+        $types = "";
+        $values = [];
+
         foreach ($new_data as $key => $value) {
-            $escaped = mysqli_real_escape_string($conn, $value);
-            $set_parts[] = "$key='$escaped'";
+            $set_parts[] = "$key = ?";
+            $types .= "s";
+            $values[] = $value;
         }
-        $update_sql = "UPDATE students SET " . implode(',', $set_parts) . " WHERE id='$student_id'";
-        if (mysqli_query($conn, $update_sql)) {
+
+        $values[] = $student_id;
+        $types .= "i";
+
+        $sql = "UPDATE students SET " . implode(", ", $set_parts) . " WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+
+        $stmt->bind_param($types, ...$values);
+
+        if ($stmt->execute()) {
             $success_msg = "Student information updated successfully.";
-            $result = mysqli_query($conn, "SELECT * FROM students WHERE id='$student_id'");
-            $student = mysqli_fetch_assoc($result);
+
+            // refresh data
+            $stmt = $conn->prepare("SELECT * FROM students WHERE id = ?");
+            $stmt->bind_param("i", $student_id);
+            $stmt->execute();
+            $student = $stmt->get_result()->fetch_assoc();
+
         } else {
-            $error_msg = "Database error: " . mysqli_error($conn);
+            $error_msg = "Database error: " . $conn->error;
         }
+
     } else {
         $no_change_msg = "No changes detected.";
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -120,13 +161,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Student Info | Teacher Portal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="../css/teachersaccess.css">
+    <link rel="stylesheet" href="<?= asset('css/teachersaccess.css') ?>">
 </head>
 <body>
 
 <div class="container">
     <div class="left-panel">
-        <a href="../teachersportal/students.php" class="back-arrow">↩</a>
+       <a href="<?= BASE_URL ?>teachersportal/students.php" class="back-arrow">↩</a>
         <div class="icon"><i class="fas fa-user-edit"></i></div>
         <?php if ($is_admin): ?>
         <h2>Edit Student</h2>
@@ -168,10 +209,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
                 <div class="form-row">
                     <label for="dob">Date of Birth</label>
                     <input type="date" name="dob" value="<?php echo htmlspecialchars($student['dob']); ?>" required onchange="calculateAge(this)">
-</xai:function_call > 
-
-<xai:function_call name="edit_file">
-<parameter name="path">
                     <input type="number" name="age" value="<?php echo htmlspecialchars($student['age']); ?>" placeholder="Age *" required>
                 </div>
 
@@ -309,7 +346,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_student'])) {
                 <button type="button" id="showDeleteModal" class="btn register-btn" style="flex: 1; min-width: 150px; background: var(--accent-rose);">
                     <i class="fas fa-trash-alt"></i> Delete Student
                 </button>
-                <a href="../teachersportal/students.php" class="btn register-btn" style="flex: 1; min-width: 150px; background: var(--slate-500); text-decoration: none;">
+                <a href="<?= BASE_URL ?>teachersportal/students.php" class="btn register-btn" style="flex: 1; min-width: 150px; background: var(--slate-500); text-decoration: none;">
                     <i class="fas fa-times"></i> Cancel
                 </a>
             </div>
@@ -378,7 +415,10 @@ document.addEventListener("DOMContentLoaded", function() {
         if (deleteBtn) deleteBtn.style.display = 'none';
         
         // Update Cancel button to be more prominent (as back button)
-        const cancelBtn = document.querySelector('a[href="../teachersportal/students.php"]');
+     
+const cancelBtn = document.querySelector(
+    'a[href="<?= BASE_URL ?>teachersportal/students.php"]'
+);
         if (cancelBtn) {
             cancelBtn.style.display = 'flex';
             cancelBtn.style.justifyContent = 'center';

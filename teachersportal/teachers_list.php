@@ -1,11 +1,12 @@
 <?php
 session_start();
-include '../config/database.php';
-include '../config/teacher_filter.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once CONFIG_PATH . 'database.php';
+require_once CONFIG_PATH . 'teacher_filter.php';
 
 // ================== CHECK LOGIN ==================
 if(!isset($_SESSION['teacher_id'])){
-    header("Location: ../Accesspage/teacher_login.php");
+header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
     exit();
 }
 
@@ -14,14 +15,15 @@ $admin_types = ['Seeder', 'Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 
 if(!$is_admin){
-    header("Location: dashboard.php");
+    header("Location: " . BASE_URL . "teachersportal/dashboard.php");
     exit();
 }
 
 // ================== DYNAMIC BACK ARROW LOGIC ==================
-$back_url = "../Accesspage/teacher_login.php";
+$back_url = BASE_URL . "Accesspage/teacher_login.php";
+
 if($is_admin){
-    $back_url = "../teachersportal/chooseSub.php";
+    $back_url = BASE_URL . "teachersportal/chooseSub.php";
 }
 
 // ================== SET COURSE FROM SESSION ==================
@@ -32,6 +34,7 @@ if(empty($selected_course)){
 }
 
 $teacher_id = $_SESSION['teacher_id'];
+$safe_course = mysqli_real_escape_string($conn, $selected_course);
 
 // ================== BUILD TEACHER FILTER (for non-admins) ==================
 $teacher_year_filter = '';
@@ -41,7 +44,7 @@ $teacher_year_filter = '';
 $teacher_section_filter = '';
 
 // Get teacher's assigned year levels for dropdown (split year_levels)
-$teacher_year_levels_query = mysqli_query($conn, "SELECT DISTINCT TRIM(SUBSTRING_INDEX(TRIM(year_levels), ',', 1)) AS yl FROM teachers WHERE course='$selected_course' ORDER BY yl");
+$teacher_year_levels_query = mysqli_query($conn, "SELECT DISTINCT TRIM(SUBSTRING_INDEX(TRIM(year_levels), ',', 1)) AS yl FROM teachers WHERE course='$safe_course' ORDER BY yl");
 $teacher_year_levels = ['1st Year','2nd Year','3rd Year','4th Year'];
 while($row = mysqli_fetch_assoc($teacher_year_levels_query)){
     if(!empty($row['yl'])) $teacher_year_levels[] = $row['yl'];
@@ -63,7 +66,7 @@ if(!empty($search)){
 // ================== FETCH REGULAR TEACHERS ==================
 $query = "SELECT id, teacher_id, first_name, middle_name, last_name, suffix, year_levels, sections, email, mobile, teacher_type
           FROM teachers 
-          WHERE course = '$selected_course' 
+          WHERE course = '$safe_course' 
           AND teacher_type NOT IN ('Administrator', 'Seeder')
           $teacher_year_filter $year_filter $search_filter
           ORDER BY last_name, first_name";
@@ -76,11 +79,11 @@ $result = mysqli_query($conn, $query) or die(mysqli_error($conn));
 <head>
     <meta charset="UTF-8">
     <title>Teachers List - <?= htmlspecialchars($selected_course) ?></title>
-    <link rel="stylesheet" href="../css/teacherportal.css">
+     <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
-<?php include 'sidebar.php'; ?>
+<?php include path('teachersportal/sidebar.php'); ?>
 
 <div class="content">
     <h1>Teachers List - <?= htmlspecialchars($selected_course) ?></h1>
@@ -89,7 +92,7 @@ $result = mysqli_query($conn, $query) or die(mysqli_error($conn));
     <div class="top-bar">
         <?php if ($is_admin): ?>
         <h3>Faculty Directory ➔</h3>
-        <a href="../Accesspage/teachers_register.php?from=admin"><button>Add Teacher</button></a>
+       <a href="<?= BASE_URL ?>Accesspage/teachers_register.php?from=admin"><button>Add Teacher</button></a>
         <?php endif; ?>
     </div>
 
@@ -155,4 +158,3 @@ $result = mysqli_query($conn, $query) or die(mysqli_error($conn));
 
 </body>
 </html>
-

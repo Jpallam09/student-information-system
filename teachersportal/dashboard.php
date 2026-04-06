@@ -1,13 +1,12 @@
 <?php
 session_start();
-include '../config/database.php';
-include '../config/teacher_filter.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
+require_once PROJECT_ROOT . '/config/teacher_filter.php';
 
 // ================== CHECK LOGIN ==================
-// Senior-level: Ensure that only authenticated teachers or admin can access the dashboard.
-// If no teacher session is active, redirect to the login page.
 if(!isset($_SESSION['teacher_id'])){
-    header("Location: ../Accesspage/teacher_login.php");
+   header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
     exit();
 }
 
@@ -16,16 +15,12 @@ $admin_types = ['Seeder', 'Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 
 // ================== SET BACK ARROW LOGIC ==================
-// Senior-level: Dynamically set the back arrow destination.
-// Regular teachers go to login page; seeded admin account goes to chooseSub.php.
-$back_url = "../Accesspage/teacher_login.php"; // default destination
+$back_url = BASE_URL . "Accesspage/teacher_login.php";
 if(isset($_SESSION['teacher_type']) && $_SESSION['teacher_type'] === "Administrator"){
-    $back_url = "../teachersportal/chooseSub.php";
+    $back_url = BASE_URL . "teachersportal/chooseSub.php";
 }
 
 // ================== SET COURSE FROM SESSION ==================
-// Senior-level: Retrieve the currently selected course from the session.
-// If the course is not set, display an error and prevent further access.
 $selected_course = $_SESSION['teacher_course'] ?? '';
 if(empty($selected_course)){
     echo "Course not assigned to this teacher. Contact admin.";
@@ -33,30 +28,26 @@ if(empty($selected_course)){
 }
 
 // ================== BUILD TEACHER FILTER ==================
-// Get filter based on teacher's assigned year levels and sections (empty for admin)
 $teacher_year_filter = '';
 $teacher_section_filter = '';
 if (!$is_admin) {
-    $teacher_year_filter = getYearLevelFilter('year_level');
-    $teacher_section_filter = getSectionFilter('section');
+    $y_params = []; $y_types = '';
+    $teacher_year_filter = getCombinedYearFilter('year_level', $y_params, $y_types);
+    $s_params = []; $s_types = '';
+    $teacher_section_filter = getCombinedSectionFilter('section', $s_params, $s_types);
 }
 
 // ================== TOTAL STUDENTS ==================
-// Senior-level: Count the number of students enrolled in the teacher's assigned course.
-// Apply teacher filters for non-admin users
 $total_students_query = mysqli_query($conn, "SELECT COUNT(*) AS total FROM students WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter");
 $total_students_row = mysqli_fetch_assoc($total_students_query);
 $total_students = $total_students_row['total'];
 
 // ================== ACTIVE SECTIONS ==================
-// Senior-level: Count distinct sections in the course to show active sections in dashboard.
-// Apply teacher filters
 $active_sections_query = mysqli_query($conn, "SELECT COUNT(DISTINCT section) AS total FROM students WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter");
 $active_sections_row = mysqli_fetch_assoc($active_sections_query);
 $active_sections = $active_sections_row['total'];
 
 // ================== AVERAGE ATTENDANCE ==================
-// Senior-level: Compute the average attendance percentage for the course by joining attendance and students table.
 $avg_attendance_query = mysqli_query($conn, "
     SELECT AVG(CASE WHEN attendance.status='present' THEN 1 ELSE 0 END) AS avg_att
     FROM attendance
@@ -69,7 +60,6 @@ $avg_attendance_row = mysqli_fetch_assoc($avg_attendance_query);
 $avg_attendance = round(($avg_attendance_row['avg_att'] ?? 0)*100,2);
 
 // ================== CLASS AVERAGE ==================
-// Senior-level: Calculate the average grade percentage for all students in the course.
 $class_avg_query = mysqli_query($conn, "
     SELECT AVG(percentage) AS class_avg
     FROM grades
@@ -82,9 +72,8 @@ $class_avg_row = mysqli_fetch_assoc($class_avg_query);
 $class_avg = round($class_avg_row['class_avg'],2);
 
 // ================== ATTENDANCE BY YEAR LEVEL ==================
-// Senior-level: Calculate attendance percentages per year level (only for assigned year levels)
 $teacher_year_levels = !$is_admin ? getTeacherYearLevels() : ['1st Year','2nd Year','3rd Year','4th Year'];
-$year_levels = $teacher_year_levels; // Use for HTML display
+$year_levels = $teacher_year_levels;
 $attendance_by_year = [];
 
 foreach($teacher_year_levels as $year) {
@@ -104,7 +93,6 @@ foreach($teacher_year_levels as $year) {
 }
 
 // ================== ANNOUNCEMENT STATISTICS ==================
-// Senior-level: Count announcements per year level
 $announcement_stats = [];
 foreach($teacher_year_levels as $year) {
     $announce_query = mysqli_query($conn, "
@@ -118,7 +106,6 @@ foreach($teacher_year_levels as $year) {
 }
 
 // ================== GRADE DISTRIBUTION ==================
-// Senior-level: Prepare a grade distribution array to be displayed in pie chart visualization.
 $grades = ['1.0'=>0,'1.25'=>0,'1.5'=>0,'1.75'=>0,'2.0'=>0,'2.25'=>0,'2.5'=>0,'2.75'=>0,'3.0'=>0,'4.0'=>0,'5.0'=>0];
 $grade_query = mysqli_query($conn, "
     SELECT grades.letter_grade 
@@ -134,7 +121,6 @@ while($row = mysqli_fetch_assoc($grade_query)){
 }
 
 // ================== YEAR LEVELS & SECTIONS ==================
-// Senior-level: Define available year levels (based on teacher assignment) and extract sections dynamically from database.
 $sections_query = mysqli_query($conn, "SELECT DISTINCT section FROM students WHERE course='$selected_course' $teacher_year_filter ORDER BY section ASC");
 $sections = [];
 while($row = mysqli_fetch_assoc($sections_query)){
@@ -142,12 +128,9 @@ while($row = mysqli_fetch_assoc($sections_query)){
 }
 
 // ================== RANKING STUDENTS (GPA 1.0-1.5) ==================
-    // Senior-level: Calculate GPA per student and filter only high-achieving students for ranking modal.
-    // DEBUG: Log filter
-    error_log("DEBUG Ranking filter: year_filter=[$teacher_year_filter] section_filter=[$teacher_section_filter] | Levels: " . implode(', ', getTeacherYearLevels()));
-    $ranking_students = [];
-    $student_query = mysqli_query($conn, "SELECT * FROM students WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter ORDER BY last_name ASC");
-
+error_log("DEBUG Ranking filter: year_filter=[$teacher_year_filter] section_filter=[$teacher_section_filter] | Levels: " . implode(', ', getTeacherYearLevels()));
+$ranking_students = [];
+$student_query = mysqli_query($conn, "SELECT * FROM students WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter ORDER BY last_name ASC");
 
 while($student = mysqli_fetch_assoc($student_query)){
     $student_id = $student['id'];
@@ -164,7 +147,6 @@ while($student = mysqli_fetch_assoc($student_query)){
             ($grade_row['final']*0.30)+
             ($grade_row['lab']*0.20);
 
-        // Convert total grade to GPA using institution's grading logic
         if($total_grade >= 60) $gpa_points = 1.0;
         elseif($total_grade >= 55) $gpa_points = 1.25;
         elseif($total_grade >= 50) $gpa_points = 1.5;
@@ -196,7 +178,6 @@ $teacher_row = mysqli_fetch_assoc($teacher_query);
 $teacher_full_name = trim($teacher_row['full_name'] ?? ($_SESSION['teacher_name'] ?? 'User'));
 
 // ================== FETCH ATTENDANCE DATA FOR MODAL ==================
-// Senior-level: Get all students with their attendance records for the modal view
 $attendance_students_query = mysqli_query($conn, "
     SELECT s.id, s.student_id, s.first_name, s.last_name, s.year_level, s.section,
            COUNT(CASE WHEN a.status='present' THEN 1 END) as total_present,
@@ -207,7 +188,6 @@ $attendance_students_query = mysqli_query($conn, "
     GROUP BY s.id
     ORDER BY s.year_level, s.section, s.last_name
 ");
-// DEBUG: Log attendance filter
 error_log("DEBUG Attendance filter: year_filter=[$teacher_year_filter] section_filter=[$teacher_section_filter]");
 
 $attendance_students = [];
@@ -215,26 +195,28 @@ while($row = mysqli_fetch_assoc($attendance_students_query)){
     $row['attendance_percentage'] = ($row['total_records']>0) ? round(($row['total_present']/$row['total_records'])*100,2) : 0;
     $attendance_students[] = $row;
 }
+
+// ================== TEACHER ASSIGNMENTS DISPLAY ==================
+$teacher_assignment_display = getTeacherAssignmentDisplay();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Dashboard - <?= htmlspecialchars($selected_course) ?></title>
-<link rel="stylesheet" href="../css/teacherportal.css">
+<link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <!-- Top Right Logo -->
 <div style="position: fixed; top: 15px; right: 20px; z-index: 9999;">
-  <img src="../images/622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 50px; vertical-align: middle; margin-right: 10px; border-radius: 5px; animation: float 3s ease-in-out infinite;">
+ <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>" 
+alt="Isabela State University seal: circular emblem with green border featuring university name, established 1978, centered torch with flame and shield containing torch, plant seedling, and gears representing knowledge, agriculture, and industry" 
+style="width: 50px; vertical-align: middle; margin-right: 10px; border-radius: 5px; animation: float 3s ease-in-out infinite;">
 </div>
 
-
-<?php include 'sidebar.php'; ?>
-
-<!-- The rest of your dashboard HTML and scripts remain completely intact -->
+<?php include PROJECT_ROOT . '/teachersportal/sidebar.php'; ?>
 
 <div class="content">
     <h1><i class="fas fa-chart-pie"></i> <?= htmlspecialchars($selected_course) ?> Dashboard</h1>
@@ -269,9 +251,17 @@ while($row = mysqli_fetch_assoc($attendance_students_query)){
             <h3><i class="fas fa-calendar"></i> Attendance Overview</h3>
             <h1>View</h1>
         </div>
+
+        <?php if (!$is_admin): ?>
+        <!-- ===== SELECTED YEAR LEVEL & SECTION CARD (regular teachers only) ===== -->
+        <div class="card">
+            <h3><i class="fas fa-layer-group"></i> Selected year level and Section</h3>
+            <h1 style="font-size:1.2em; color:#0A91AB;"><?= htmlspecialchars($teacher_assignment_display) ?></h1>
+        </div>
+        <?php endif; ?>
     </div>
 
-<!-- ================== ADDED: Attendance Cards by Year Level ================== -->
+<!-- ================== Attendance Cards by Year Level ================== -->
 <div class="section-box">
     <h2>Attendance by Year Level 📊</h2>
     <div class="attendance-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
@@ -287,7 +277,7 @@ while($row = mysqli_fetch_assoc($attendance_students_query)){
     </div>
 </div>
 
-<!-- ================== ADDED: Announcement Statistics Cards ================== -->
+<!-- ================== Announcement Statistics Cards ================== -->
 <div class="section-box">
     <h2>Announcement Statistics 📢</h2>
     <div class="announcement-cards">
@@ -438,57 +428,44 @@ while($row = mysqli_fetch_assoc($attendance_students_query)){
                     <th>Present/Total</th>
                 </tr>
             </thead>
-            <tbody id="yearAttendanceTableBody">
-                <!-- Filled by JavaScript -->
-            </tbody>
+            <tbody id="yearAttendanceTableBody"></tbody>
         </table>
     </div>
 </div>
 
+
+
 <script>
-// Grade Distribution Chart
 new Chart(document.getElementById('gradeChart'), {
     type:'pie',
     data:{labels:<?= json_encode(array_keys($grades)) ?>,datasets:[{ data:<?= json_encode(array_values($grades)) ?>, backgroundColor:['#0C2233','#065471','#0A91AB','#FFC045','#FF8C00','#FF5C5C','#AA336A','#9933FF','#33FFAA','#33CCFF','#888'] }]},
     options:{responsive:true}
 });
 
-// ================== ADDED: Modal and Filter Functionality ==================
 document.addEventListener('DOMContentLoaded', function() {
-    // Get modals
-    const rankingModal = document.getElementById('studentModal');
-    const attendanceModal = document.getElementById('attendanceModal');
+    const rankingModal        = document.getElementById('studentModal');
+    const attendanceModal     = document.getElementById('attendanceModal');
     const yearAttendanceModal = document.getElementById('yearAttendanceModal');
-    
-    // Get all close buttons
-    const closeButtons = document.querySelectorAll('.close');
-    
-    // Attendance data from PHP
-    const attendanceStudents = <?= json_encode($attendance_students) ?>;
-    
-    // Add click event to all clickable cards
+    const assignmentsModal    = null; // Removed assignments modal
+    const closeButtons        = document.querySelectorAll('.close');
+    const attendanceStudents  = <?= json_encode($attendance_students) ?>;
+
+    // ===== Open modals via clickable cards =====
     document.querySelectorAll('.clickable-card').forEach(card => {
         card.addEventListener('click', function() {
             const type = this.getAttribute('data-type');
-            
-            if (type === 'ranking') {
-                rankingModal.style.display = 'flex';
-            } else if (type === 'attendance') {
-                attendanceModal.style.display = 'flex';
-            }
+            if      (type === 'ranking')     rankingModal.style.display        = 'flex';
+            else if (type === 'attendance')  attendanceModal.style.display     = 'flex';
+            // assignments handling removed
         });
     });
-    
+
+    // ===== Year attendance card click =====
     function showYearAttendance(year) {
         document.getElementById('yearModalTitle').textContent = `${year} Attendance Overview`;
-        
-        // Filter students by year
         const yearStudents = attendanceStudents.filter(s => s.year_level === year);
-        
-        // Populate table
         const tbody = document.getElementById('yearAttendanceTableBody');
         tbody.innerHTML = '';
-        
         yearStudents.forEach(student => {
             const row = document.createElement('tr');
             row.setAttribute('data-section', student.section);
@@ -498,125 +475,85 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>${student.section}</td>
                 <td>
                     ${student.attendance_percentage}%
-                    <div class="progress-bar" style="margin-top: 5px;">
-                        <div class="progress-fill" style="width: ${student.attendance_percentage}%;"></div>
+                    <div class="progress-bar" style="margin-top:5px;">
+                        <div class="progress-fill" style="width:${student.attendance_percentage}%;"></div>
                     </div>
                 </td>
                 <td>${student.total_present}/${student.total_records}</td>
             `;
             tbody.appendChild(row);
         });
-        
         yearAttendanceModal.style.display = 'flex';
     }
-    
-    // Close modal when clicking on X
+
+    // ===== Close all modals =====
     closeButtons.forEach(button => {
         button.addEventListener('click', function() {
-            rankingModal.style.display = 'none';
-            attendanceModal.style.display = 'none';
+            rankingModal.style.display        = 'none';
+            attendanceModal.style.display     = 'none';
             yearAttendanceModal.style.display = 'none';
+            // assignmentsModal removed
         });
     });
-    
-    // Close modal when clicking outside
+
     window.addEventListener('click', function(event) {
-        if (event.target === rankingModal) {
-            rankingModal.style.display = 'none';
-        }
-        if (event.target === attendanceModal) {
-            attendanceModal.style.display = 'none';
-        }
-        if (event.target === yearAttendanceModal) {
-            yearAttendanceModal.style.display = 'none';
-        }
+        if (event.target === rankingModal)        rankingModal.style.display        = 'none';
+        if (event.target === attendanceModal)     attendanceModal.style.display     = 'none';
+        if (event.target === yearAttendanceModal) yearAttendanceModal.style.display = 'none';
+        // assignmentsModal removed
     });
-    
-    // Filter functionality for ranking modal
-    const yearFilter = document.getElementById('yearFilter');
+
+    // ===== Ranking table filter =====
+    const yearFilter    = document.getElementById('yearFilter');
     const sectionFilter = document.getElementById('sectionFilter');
-    
-    if (yearFilter) {
-        yearFilter.addEventListener('change', filterRankingTable);
-    }
-    
-    if (sectionFilter) {
-        sectionFilter.addEventListener('change', filterRankingTable);
-    }
-    
+    if (yearFilter)    yearFilter.addEventListener('change', filterRankingTable);
+    if (sectionFilter) sectionFilter.addEventListener('change', filterRankingTable);
+
     function filterRankingTable() {
-        const selectedYear = yearFilter ? yearFilter.value : '';
+        const selectedYear    = yearFilter    ? yearFilter.value    : '';
         const selectedSection = sectionFilter ? sectionFilter.value : '';
         const rows = document.querySelectorAll('#modalTable tbody tr');
-        
-        rows.forEach(row => {
-            const rowYear = row.getAttribute('data-year');
-            const rowSection = row.getAttribute('data-section');
-            
-            const yearMatch = !selectedYear || rowYear === selectedYear;
-            const sectionMatch = !selectedSection || rowSection === selectedSection;
-            
-            row.style.display = yearMatch && sectionMatch ? '' : 'none';
-        });
-        
-        // Re-rank visible rows
         let visibleCount = 1;
+        rows.forEach(row => {
+            const yearMatch    = !selectedYear    || row.getAttribute('data-year')    === selectedYear;
+            const sectionMatch = !selectedSection || row.getAttribute('data-section') === selectedSection;
+            row.style.display  = yearMatch && sectionMatch ? '' : 'none';
+        });
         rows.forEach(row => {
             if (row.style.display !== 'none') {
                 const rankCell = row.querySelector('td:first-child');
-                if (rankCell) {
-                    rankCell.textContent = `Rank ${visibleCount}`;
-                    visibleCount++;
-                }
+                if (rankCell) rankCell.textContent = `Rank ${visibleCount++}`;
             }
         });
     }
-    
-    // Filter functionality for attendance modal
-    const attendanceYearFilter = document.getElementById('attendanceYearFilter');
+
+    // ===== Attendance modal filter =====
+    const attendanceYearFilter    = document.getElementById('attendanceYearFilter');
     const attendanceSectionFilter = document.getElementById('attendanceSectionFilter');
-    
-    if (attendanceYearFilter) {
-        attendanceYearFilter.addEventListener('change', filterAttendanceTable);
-    }
-    
-    if (attendanceSectionFilter) {
-        attendanceSectionFilter.addEventListener('change', filterAttendanceTable);
-    }
-    
+    if (attendanceYearFilter)    attendanceYearFilter.addEventListener('change', filterAttendanceTable);
+    if (attendanceSectionFilter) attendanceSectionFilter.addEventListener('change', filterAttendanceTable);
+
     function filterAttendanceTable() {
-        const selectedYear = attendanceYearFilter ? attendanceYearFilter.value : '';
+        const selectedYear    = attendanceYearFilter    ? attendanceYearFilter.value    : '';
         const selectedSection = attendanceSectionFilter ? attendanceSectionFilter.value : '';
-        const rows = document.querySelectorAll('#attendanceModalTable tbody tr');
-        
-        rows.forEach(row => {
-            const rowYear = row.getAttribute('data-year');
-            const rowSection = row.getAttribute('data-section');
-            
-            const yearMatch = !selectedYear || rowYear === selectedYear;
-            const sectionMatch = !selectedSection || rowSection === selectedSection;
-            
-            row.style.display = yearMatch && sectionMatch ? '' : 'none';
+        document.querySelectorAll('#attendanceModalTable tbody tr').forEach(row => {
+            const yearMatch    = !selectedYear    || row.getAttribute('data-year')    === selectedYear;
+            const sectionMatch = !selectedSection || row.getAttribute('data-section') === selectedSection;
+            row.style.display  = yearMatch && sectionMatch ? '' : 'none';
         });
     }
-    
-    // Filter functionality for year attendance modal
+
+    // ===== Year attendance section filter =====
     const yearAttendanceSectionFilter = document.getElementById('yearAttendanceSectionFilter');
-    
     if (yearAttendanceSectionFilter) {
-        yearAttendanceSectionFilter.addEventListener('change', filterYearAttendanceTable);
-    }
-    
-    function filterYearAttendanceTable() {
-        const selectedSection = yearAttendanceSectionFilter ? yearAttendanceSectionFilter.value : '';
-        const rows = document.querySelectorAll('#yearAttendanceTable tbody tr');
-        
-        rows.forEach(row => {
-            const rowSection = row.getAttribute('data-section');
-            const sectionMatch = !selectedSection || rowSection === selectedSection;
-            row.style.display = sectionMatch ? '' : 'none';
+        yearAttendanceSectionFilter.addEventListener('change', function() {
+            const selectedSection = this.value;
+            document.querySelectorAll('#yearAttendanceTable tbody tr').forEach(row => {
+                row.style.display = !selectedSection || row.getAttribute('data-section') === selectedSection ? '' : 'none';
+            });
         });
     }
+
 });
 </script>
 </body>

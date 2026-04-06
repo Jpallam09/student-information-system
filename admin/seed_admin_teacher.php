@@ -1,5 +1,6 @@
 <?php
-include '../config/database.php'; // Adjust path if needed
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
 
 $teacher_id = "Registrar";
 $first_name = "System";

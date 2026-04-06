@@ -1,11 +1,13 @@
 <?php
 session_start();
-include '../config/database.php';
-include '../config/teacher_filter.php';
+
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
+require_once PROJECT_ROOT . '/config/teacher_filter.php';
 
 // ================== CHECK LOGIN ==================
 if(!isset($_SESSION['teacher_id'])){
-    header("Location: ../Accesspage/teacher_login.php");
+    header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
     exit();
 }
 
@@ -13,85 +15,120 @@ if(!isset($_SESSION['teacher_id'])){
 $admin_types = ['Seeder', 'Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 
-// ================== DYNAMIC BACK ARROW LOGIC ==================
-$back_url = "../Accesspage/teacher_login.php";
-if(isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types)){
-    $back_url = "../teachersportal/chooseSub.php";
+// ================== BACK URL ==================
+$back_url = BASE_URL . "Accesspage/teacher_login.php";
+if($is_admin){
+    $back_url = BASE_URL . "teachersportal/chooseSub.php";
 }
 
-// ================== SET COURSE FROM SESSION ==================
+// ================== SET COURSE ==================
 $selected_course = $_SESSION['teacher_course'] ?? '';
+
 if(empty($selected_course)){
     echo "Course not assigned to this teacher. Contact admin.";
     exit();
 }
 
-$teacher_id = $_SESSION['teacher_id'];
-
 // Allowed courses
 $allowed_courses = ['BSIT','BSED','BAT','BTVTED'];
 if(!in_array(strtoupper($selected_course), $allowed_courses)){
     echo "<p>No course selected. Please go back and choose a course.</p>";
-    echo '<a href="chooseSub.php">← Go Back</a>';
+    echo '<a href="' . BASE_URL . 'teachersportal/chooseSub.php">← Go Back</a>';
     exit();
 }
 
-// ================== BUILD TEACHER FILTER ==================
+// ================== FILTERS ==================
 $teacher_year_filter = '';
 $teacher_section_filter = '';
+
 if (!$is_admin) {
-    $teacher_year_filter = getYearLevelFilter('year_level');
-    $teacher_section_filter = getSectionFilter('section');
+    $y_params = []; $y_types = '';
+    $teacher_year_filter = getCombinedYearFilter('year_level', $y_params, $y_types);
+    $s_params = []; $s_types = '';
+    $teacher_section_filter = getCombinedSectionFilter('section', $s_params, $s_types);
 }
 
-// Get teacher's assigned year levels for dropdown
 $teacher_year_levels = !$is_admin ? getTeacherYearLevels() : ['1st Year','2nd Year','3rd Year','4th Year'];
 
-// YEAR LEVEL FILTER (from URL)
+// URL filters
 $selected_year = $_GET['year_level'] ?? '';
-$year_filter = $selected_year ? " AND year_level='$selected_year'" : "";
-
-// SECTION FILTER
 $selected_section = $_GET['section'] ?? '';
+$search = trim($_GET['search'] ?? '');
 
-// Fetch unique sections for the selected course and year (PREPARED)
+// ================== SECTION QUERY ==================
 $sections = [];
-$stmt = $conn->prepare("SELECT DISTINCT section FROM students WHERE course=? $teacher_year_filter $year_filter ORDER BY section");
-$stmt->bind_param("s", $selected_course);
+
+// Build params starting with course
+$params_sec = [$selected_course];
+$types_sec = "s";
+
+// ⬇️ Add the teacher year filter params BEFORE appending selected_year
+if (!$is_admin && !empty($y_params)) {
+    $params_sec = array_merge($params_sec, $y_params);
+    $types_sec .= $y_types;
+}
+
+$section_sql = "SELECT DISTINCT section FROM students WHERE course=? $teacher_year_filter";
+
+if ($selected_year) {
+    $section_sql .= " AND year_level=?";
+    $params_sec[] = $selected_year;
+    $types_sec .= "s";
+}
+
+$section_sql .= " ORDER BY section";
+
+$stmt = $conn->prepare($section_sql);
+$stmt->bind_param($types_sec, ...$params_sec);
 $stmt->execute();
-$section_result = $stmt->get_result();
-while($row = $section_result->fetch_assoc()){
+$result_sec = $stmt->get_result();
+
+while($row = $result_sec->fetch_assoc()){
     $sections[] = $row['section'];
 }
 $stmt->close();
 
-$section_filter = $selected_section ? " AND section=?" : "";
-
-// Search
-$search = isset($_GET['search']) ? trim($_GET['search']) : '';
-
-// Fetch students with filters (PREPARED)
-$base_query = "SELECT id, student_id, first_name, last_name, section, year_level 
+// ================== STUDENTS QUERY ==================
+$query = "SELECT id, student_id, first_name, last_name, section, year_level 
           FROM students 
-          WHERE course=? $teacher_year_filter $teacher_section_filter $year_filter $section_filter";
+          WHERE course=? $teacher_year_filter $teacher_section_filter";
 
 $params = [$selected_course];
 $types = "s";
 
+// ⬇️ Merge teacher filter params right after course
+if (!$is_admin) {
+    if (!empty($y_params)) {
+        $params = array_merge($params, $y_params);
+        $types .= $y_types;
+    }
+    if (!empty($s_params)) {
+        $params = array_merge($params, $s_params);
+        $types .= $s_types;
+    }
+}
+
+// Then add URL filter params as before
+if ($selected_year) {
+    $query .= " AND year_level=?";
+    $params[] = $selected_year;
+    $types .= "s";
+}
+
 if ($selected_section) {
+    $query .= " AND section=?";
     $params[] = $selected_section;
     $types .= "s";
 }
 
-if($search != ''){
-    $base_query .= " AND (student_id LIKE ? OR first_name LIKE ? OR last_name LIKE ? 
-                     OR CONCAT(first_name,' ',last_name) LIKE ? OR section LIKE ?)";
-    $like_search = "%$search%";
-    $params = array_merge($params, [$like_search, $like_search, $like_search, $like_search, $like_search]);
+if ($search != '') {
+    $query .= " AND (student_id LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR CONCAT(first_name,' ',last_name) LIKE ? OR section LIKE ?)";
+    $like = "%$search%";
+    $params = array_merge($params, [$like, $like, $like, $like, $like]);
     $types .= "sssss";
 }
 
-$stmt = $conn->prepare($base_query);
+$stmt = $conn->prepare($query);
 $stmt->bind_param($types, ...$params);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -102,7 +139,7 @@ $stmt->close();
 <head>
     <meta charset="UTF-8">
     <title>Students - <?= htmlspecialchars($selected_course) ?></title>
-    <link rel="stylesheet" href="../css/teacherportal.css">
+    <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -113,7 +150,7 @@ $stmt->close();
 
     <div class="top-bar">
         <h3>Register Student Directory ➔</h3>
-        <a href="../Accesspage/register.php?from=teacher"><button>Add Student</button></a>
+       <a href="<?= BASE_URL ?>Accesspage/register.php?from=teacher"><button>Add Student</button></a>
     </div>
 
     <!-- YEAR LEVEL + SECTION DROPDOWN + SEARCH -->
@@ -165,7 +202,7 @@ $stmt->close();
                     <td>".htmlspecialchars($student['year_level'])."</td>
                     <td>".htmlspecialchars($student['section'])."</td>
                     <td>
-                        <a href='../teachers_access/teachers_accessto_student.php?id=".urlencode($student['id'])."' class='view-student-btn' title='View Student'><i class='fas fa-user-graduate'></i></a>
+                        <a href='".BASE_URL."teachers_access/teachers_accessto_student.php?id=".urlencode($student['id'])."' class='view-student-btn' title='View Student'><i class='fas fa-user-graduate'></i></a>
                     </td>
                 </tr>";
             }

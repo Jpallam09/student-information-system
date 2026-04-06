@@ -1,23 +1,44 @@
 <?php
-$host = "localhost";
-$user = "studentapp";  // DEDICATED USER - CREATE BELOW
-$pass = "StudentAppSecure2024!";  // CHANGE THIS
-$db   = "studentinfo";
+/**
+ * ============================================================
+ * DATABASE CONFIG (PRODUCTION-READY)
+ * ============================================================
+ */
 
-// Try dedicated user first, fallback to root (XAMPP default)
+/**
+ * Load credentials from environment (BEST PRACTICE)
+ * You can also hardcode for local only
+ */
+$host = getenv('DB_HOST') ?: 'localhost';
+$user = getenv('DB_USER') ?: 'root';
+$pass = getenv('DB_PASS') ?: '';
+$db   = getenv('DB_NAME') ?: 'studentinfo';
+
+/**
+ * ============================================================
+ * CREATE CONNECTION
+ * ============================================================
+ */
 $conn = mysqli_connect($host, $user, $pass, $db);
+
+/**
+ * ============================================================
+ * ERROR HANDLING
+ * ============================================================
+ */
 if (!$conn) {
-    error_log("Dedicated DB user failed, trying root fallback");
-    $user = "root";
-    $pass = "";
-    $conn = mysqli_connect($host, $user, $pass, $db);
+    // Log error instead of exposing details to users
+    error_log("Database Connection Failed: " . mysqli_connect_error());
+
+    // Show generic message
+    die("Database connection error. Please contact the administrator.");
 }
 
-if (!$conn) {
-    die("Database connection failed: " . mysqli_connect_error() . "\nCreate 'studentapp' user or fix creds.");
+/**
+ * ============================================================
+ * SET CHARACTER SET (IMPORTANT)
+ * ============================================================
+ */
+if (!mysqli_set_charset($conn, "utf8mb4")) {
+    error_log("Charset Error: " . mysqli_error($conn));
 }
-
-// RECOMMENDED: Create dedicated user in phpMyAdmin/MySQL:
-// GRANT ALL ON studentinfo.* TO 'studentapp'@'localhost' IDENTIFIED BY 'StudentAppSecure2024!';
-// FLUSH PRIVILEGES;
-?>

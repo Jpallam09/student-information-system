@@ -1,39 +1,41 @@
 <?php
 session_start();
-include '../config/database.php';
-include '../config/current_school_year.php';
-include 'components/inactive_warning.php';
-
-
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once CONFIG_PATH . 'database.php';
+require_once CONFIG_PATH . 'current_school_year.php';
 
 /* -----------------------------
    STUDENT AUTHENTICATION
 ------------------------------ */
 if(!isset($_SESSION['student_id'])){
-    header("Location: ../Accesspage/student_login.php");
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
     exit();
 }
+
+include PROJECT_ROOT . '/studentsportal/components/inactive_warning.php';
 
 $student_id = $_SESSION['student_id'];
 
 /* -----------------------------
    GET STUDENT INFO
 ------------------------------ */
-$student_result = mysqli_query($conn, "
+$stmt = $conn->prepare("
     SELECT course, year_level, section, school_year, semester
     FROM students 
-    WHERE id='$student_id'
-") or die(mysqli_error($conn));
+    WHERE id = ?
+");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$student = $result->fetch_assoc();
 
-$student = mysqli_fetch_assoc($student_result);
 if (!$student) {
-    die('Student record not found.');
+    die("Student record not found.");
 }
 
 $active_year = getActiveSchoolYear($conn);
-$active_sem = getActiveSemester($conn);
+$active_sem  = getActiveSemester($conn);
 
-// NEW: Check inactive enrollment (no longer blocks access)
 $is_inactive = ($_SESSION['inactive_enrollment'] ?? false) || 
                ($student['school_year'] != $active_year || $student['semester'] != $active_sem);
 
@@ -44,34 +46,39 @@ $section     = $student['section'];
 /* -----------------------------
    GET COURSE ID
 ------------------------------ */
-$course_result = mysqli_query($conn, "SELECT id FROM courses WHERE course_name='$course_name'");
-if(!$course_result || mysqli_num_rows($course_result) == 0){
-    $course_id = 0;
-} else {
-    $course_row = mysqli_fetch_assoc($course_result);
+$stmt = $conn->prepare("SELECT id FROM courses WHERE course_name = ?");
+$stmt->bind_param("s", $course_name);
+$stmt->execute();
+$result = $stmt->get_result();
+
+$course_id = 0;
+if ($result->num_rows > 0) {
+    $course_row = $result->fetch_assoc();
     $course_id = $course_row['id'];
 }
 
 /* -----------------------------
    FETCH SUBJECTS FOR STUDENT
 ------------------------------ */
-$subjects_query = mysqli_query($conn, "
-    SELECT id, code, subject_name, description, instructor
+$stmt = $conn->prepare("
+    SELECT id, code, subject_name, description, instructor, year_level, section
     FROM subjects
-    WHERE course_id='$course_id'
-      AND year_level='$year'
-      AND (section IS NULL OR section='' OR section='$section')
+    WHERE course_id = ?
+      AND year_level = ?
+      AND (section IS NULL OR section = '' OR section = ?)
     ORDER BY subject_name ASC
-") or die(mysqli_error($conn));
+");
+$stmt->bind_param("iss", $course_id, $year, $section);
+$stmt->execute();
+$result = $stmt->get_result();
 
 $subjects = [];
-while($row = mysqli_fetch_assoc($subjects_query)){
+while ($row = $result->fetch_assoc()) {
     $subjects[] = $row;
 }
 
 // Get subject IDs for querying tasks
 $subject_ids = array_column($subjects, 'id');
-$subject_ids_str = implode(',', array_map('intval', $subject_ids));
 
 /* -----------------------------
    FETCH TASKS FOR STUDENT'S SUBJECTS
@@ -84,89 +91,86 @@ $tasks = [
 
 // Get student's submitted task IDs
 $submitted_task_ids = [];
-if ($student_id > 0) {
-    $submitted_query = mysqli_query($conn, "
-        SELECT task_id FROM task_submissions WHERE student_id = $student_id
-    ");
-    if ($submitted_query) {
-        while ($row = mysqli_fetch_assoc($submitted_query)) {
-            $submitted_task_ids[] = $row['task_id'];
-        }
-    }
+$sub_stmt = $conn->prepare("SELECT DISTINCT task_id FROM task_submissions WHERE student_id = ?");
+$sub_stmt->bind_param("i", $student_id);
+$sub_stmt->execute();
+$sub_result = $sub_stmt->get_result();
+while ($sub_row = $sub_result->fetch_assoc()) {
+    $submitted_task_ids[] = (int)$sub_row['task_id'];
 }
 
-if (!empty($subject_ids_str)) {
+// Fetch tasks by type
+if (!empty($subject_ids)) {
+    $placeholders = implode(',', array_fill(0, count($subject_ids), '?'));
     $task_types = ['activities', 'homework', 'laboratory'];
-    
+
     foreach ($task_types as $type) {
-            $tasks_query = mysqli_query($conn, "
-                SELECT t.*, t.due_date, s.subject_name, s.code
-                FROM tasks t
-                JOIN subjects s ON t.subject_id = s.id
-                WHERE t.subject_id IN ($subject_ids_str)
-                  AND t.task_type = '$type'
-                ORDER BY t.created_at DESC
-            ") or die(mysqli_error($conn));
-        
-        while ($row = mysqli_fetch_assoc($tasks_query)) {
-            // Check if student submitted this task
-            $row['is_submitted'] = in_array($row['id'], $submitted_task_ids);
+        $types = str_repeat('i', count($subject_ids)) . 's';
+        $stmt = $conn->prepare("
+            SELECT t.*, s.subject_name, s.code
+            FROM tasks t JOIN subjects s ON t.subject_id = s.id
+            WHERE t.subject_id IN ($placeholders) AND t.task_type = ?
+            ORDER BY t.created_at DESC
+        ");
+        $params = array_merge($subject_ids, [$type]);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            $row['is_submitted'] = in_array((int)$row['id'], $submitted_task_ids);
             $row['is_overdue'] = !empty($row['due_date']) && strtotime($row['due_date']) < time();
             $tasks[$type][] = $row;
         }
     }
 }
 
-// Calculate subject-wise stats
+// Calculate overall stats
+$total_stmt = $conn->prepare("
+    SELECT COUNT(*) as total FROM tasks t 
+    JOIN subjects s ON t.subject_id = s.id
+    WHERE s.course_id = ? 
+    AND s.year_level = ? AND (s.section = ? OR s.section = '')
+");
+$total_stmt->bind_param("iss", $course_id, $year, $section);
+$total_stmt->execute();
+$total_row = $total_stmt->get_result()->fetch_assoc();
+$total_tasks = (int)$total_row['total'];
+
+$submitted_stmt = $conn->prepare("
+    SELECT COUNT(DISTINCT ts.task_id) as submitted 
+    FROM task_submissions ts JOIN tasks t ON ts.task_id = t.id JOIN subjects s ON t.subject_id = s.id
+    WHERE ts.student_id = ? AND s.course_id = ?
+    AND s.year_level = ? AND (s.section = ? OR s.section = '')
+");
+$submitted_stmt->bind_param("iiss", $student_id, $course_id, $year, $section);
+$submitted_stmt->execute();
+$submitted_row = $submitted_stmt->get_result()->fetch_assoc();
+$total_submitted = (int)$submitted_row['submitted'];
+
+// Subject stats
 $subject_stats = [];
-foreach ($subjects as &$subject) {
+foreach ($subjects as $subject) {
     $subj_id = $subject['id'];
     
-    // Count total tasks for this subject
-    $total_query = mysqli_query($conn, "
-        SELECT COUNT(*) as total FROM tasks WHERE subject_id = $subj_id AND task_type IN ('activities', 'homework', 'laboratory')
-    ");
-    $total_row = mysqli_fetch_assoc($total_query);
-    $total_tasks = $total_row['total'] ?? 0;
+    $subj_total = $conn->prepare("SELECT COUNT(*) as total FROM tasks WHERE subject_id = ?");
+    $subj_total->bind_param("i", $subj_id);
+    $subj_total->execute();
+    $total_row = $subj_total->get_result()->fetch_assoc();
     
-    // Count submitted tasks for this subject
-    $submitted_query = mysqli_query($conn, "
-        SELECT COUNT(DISTINCT ts.task_id) as submitted 
-        FROM task_submissions ts
-        JOIN tasks t ON ts.task_id = t.id
-        WHERE ts.student_id = $student_id AND t.subject_id = $subj_id
+    $subj_submitted = $conn->prepare("
+        SELECT COUNT(DISTINCT ts.task_id) as submitted FROM task_submissions ts 
+        JOIN tasks t ON ts.task_id = t.id WHERE ts.student_id = ? AND t.subject_id = ?
     ");
-    $submitted_row = mysqli_fetch_assoc($submitted_query);
-    $submitted_count = $submitted_row['submitted'] ?? 0;
+    $subj_submitted->bind_param("ii", $student_id, $subj_id);
+    $subj_submitted->execute();
+    $sub_row = $subj_submitted->get_result()->fetch_assoc();
     
     $subject_stats[$subj_id] = [
-        'total' => $total_tasks,
-        'submitted' => $submitted_count,
-        'pending' => max(0, $total_tasks - $submitted_count)
+        'total' => (int)$total_row['total'],
+        'submitted' => (int)$sub_row['submitted'],
+        'pending' => max(0, (int)$total_row['total'] - (int)$sub_row['submitted'])
     ];
-}
-
-// Calculate overall stats - Only count submitted tasks that belong to student's current subjects
-$total_tasks = count($tasks['activities']) + count($tasks['homework']) + count($tasks['laboratory']);
-
-// Count only submitted tasks that are in the student's current subjects
-$total_submitted = 0;
-$current_task_ids = [];
-foreach ($tasks['activities'] as $t) $current_task_ids[] = $t['id'];
-foreach ($tasks['homework'] as $t) $current_task_ids[] = $t['id'];
-foreach ($tasks['laboratory'] as $t) $current_task_ids[] = $t['id'];
-
-if (!empty($current_task_ids)) {
-    $current_task_ids_str = implode(',', array_map('intval', $current_task_ids));
-    $submitted_count_query = mysqli_query($conn, "
-        SELECT COUNT(DISTINCT task_id) as count 
-        FROM task_submissions 
-        WHERE student_id = $student_id AND task_id IN ($current_task_ids_str)
-    ");
-    if ($submitted_count_query) {
-        $row = mysqli_fetch_assoc($submitted_count_query);
-        $total_submitted = $row['count'] ?? 0;
-    }
 }
 ?>
 
@@ -174,16 +178,16 @@ if (!empty($current_task_ids)) {
 <html>
 <head>
     <title>My Tasks</title>
-    <link rel="stylesheet" href="../css/studentportal.css">
+    <link rel="stylesheet" href="<?= asset('css/studentportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
     <div style="position: fixed; top: 15px; right: 20px; z-index: 9999;">
-        <img src="../images/task.jpg.png" alt="Logo" style="width: 50px; border-radius: 5px;">
+        <img src="<?= asset('images/task.jpg.png') ?>" alt="Logo" style="width: 50px; border-radius: 5px;">
     </div>
 </head>
 <body>
 
-<?php include 'students_sidebar.php'; ?>
+<?php include PROJECT_ROOT . '/studentsportal/students_sidebar.php'; ?>
 
 <div class="main-content">
 
@@ -227,11 +231,8 @@ if (!empty($current_task_ids)) {
         </div>
     </div>
 
-
-
     <?php if (empty($subjects)): ?>
         <div class="no-tasks">
-            
             <i class="fas fa-book-open"></i>
             <p>No subjects found for your course. Please contact your administrator.</p>
         </div>
@@ -295,7 +296,7 @@ if (!empty($current_task_ids)) {
             </div>
             <div class="task-type-content" id="section-homework-content" style="display: none;">
                 <?php foreach ($tasks['homework'] as $task): ?>
-                    <div class="task-item" data-subject-id="<?php echo $task['subject_id']; ?>">
+                    <div class="task-item" data-task-id="<?php echo $task['id']; ?>" data-is-overdue="<?php echo $task['is_overdue'] ? 'true' : 'false'; ?>" data-due-date="<?php echo htmlspecialchars($task['due_date'] ?? ''); ?>" data-subject-id="<?php echo $task['subject_id']; ?>">
                         <div class="task-item-header">
                             <div style="flex: 1;">
                                 <h4 class="task-title"><?php echo htmlspecialchars($task['title']); ?></h4>
@@ -313,7 +314,7 @@ if (!empty($current_task_ids)) {
                         <div class="task-meta">
                             <span class="task-date"><i class="fas fa-calendar"></i> Posted: <?php echo date('M j, Y', strtotime($task['created_at'])); ?></span>
                             <div class="task-actions">
-                                <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View</button>
+                                <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View Task from Teacher</button>
                                 <?php if($task['is_submitted']): ?>
                                     <button class="btn-task btn-submitted" onclick="viewMySubmission(<?php echo $task['id']; ?>)" style="background: var(--accent-emerald); color: white;"><i class="fas fa-check"></i> View Submission</button>
                                 <?php else: ?>
@@ -337,7 +338,7 @@ if (!empty($current_task_ids)) {
             </div>
             <div class="task-type-content" id="section-laboratory-content" style="display: none;">
                 <?php foreach ($tasks['laboratory'] as $task): ?>
-                    <div class="task-item" data-subject-id="<?php echo $task['subject_id']; ?>">
+                    <div class="task-item" data-task-id="<?php echo $task['id']; ?>" data-is-overdue="<?php echo $task['is_overdue'] ? 'true' : 'false'; ?>" data-due-date="<?php echo htmlspecialchars($task['due_date'] ?? ''); ?>" data-subject-id="<?php echo $task['subject_id']; ?>">
                         <div class="task-item-header">
                             <div style="flex: 1;">
                                 <h4 class="task-title"><?php echo htmlspecialchars($task['title']); ?></h4>
@@ -355,7 +356,7 @@ if (!empty($current_task_ids)) {
                         <div class="task-meta">
                             <span class="task-date"><i class="fas fa-calendar"></i> Posted: <?php echo date('M j, Y', strtotime($task['created_at'])); ?></span>
                             <div class="task-actions">
-                                <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View</button>
+                                <button class="btn-task btn-view" onclick="viewTask(<?php echo $task['id']; ?>)"><i class="fas fa-eye"></i> View Task from Teacher</button>
                                 <?php if($task['is_submitted']): ?>
                                     <button class="btn-task btn-submitted" onclick="viewMySubmission(<?php echo $task['id']; ?>)" style="background: var(--accent-emerald); color: white;"><i class="fas fa-check"></i> View Submission</button>
                                 <?php else: ?>
@@ -438,6 +439,7 @@ if (!empty($current_task_ids)) {
                 <span class="task-detail-label">Submitted On</span>
                 <span class="task-detail-value" id="submissionDate"></span>
             </div>
+            <div id="teacherReadStatus" style="margin-top: 15px; padding: 10px; border-radius: 6px; background: var(--slate-50); font-weight: 500; display: flex; align-items: center; gap: 8px;"></div>
             <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
                 <button type="button" class="btn-task" onclick="openEditSubmissionModal()" style="background: #f59e0b; color: white;">
                     <i class="fas fa-edit"></i> Edit
@@ -531,7 +533,7 @@ if (!empty($current_task_ids)) {
                 <input type="hidden" id="submitTaskId" name="task_id">
                 <div class="form-group">
                     <label for="submissionFile">Your Submission (File)</label>
-                    <input type="file" id="submissionFile" name="submission_file" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.zip,.rar">
+                    <input type="file" id="submissionFile" name="submission_file" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.zip,.rar" required>
                 </div>
                 <div class="form-group">
                     <label for="submissionNotes">Notes (Optional)</label>
@@ -545,16 +547,16 @@ if (!empty($current_task_ids)) {
     </div>
 </div>
 
-    <!-- Real-time teacher read status -->
-    <script>
+<script>
 // Real-time teacher read status 
 let studentEventSource = null;
 let studentPollInterval = null;
 let currentTaskId = null;
+let currentSubmissionData = null;
 
-const sseStudentUrl = 'sse_student.php';
+const sseStudentUrl = '<?= BASE_URL ?>tasks/sse_student.php';
 
-// NEW: Function to update teacher read badge
+// Function to update teacher read badge
 function updateTeacherReadStatus(taskId, teacherRead) {
     const statusEl = document.querySelector(`.teacher-read-status[data-task-id="${taskId}"]`);
     if (statusEl) {
@@ -571,12 +573,12 @@ function updateTeacherReadStatus(taskId, teacherRead) {
     }
 }
 
-// NEW: Load initial teacher read status for submitted tasks
+// Load initial teacher read status for submitted tasks
 function loadInitialTeacherReadStatus() {
-    const submittedBadges = document.querySelectorAll('.teacher-read-status[data-teacher-read="0"]');
+    const submittedBadges = document.querySelectorAll('.teacher-read-status');
     submittedBadges.forEach(badge => {
         const taskId = badge.dataset.taskId;
-        fetch(`../task/get_submissions.php?task_id=${taskId}`)
+        fetch(`<?= BASE_URL ?>tasks/get_submissions.php?task_id=${taskId}`)
             .then(r => r.json())
             .then(data => {
                 if (data.success && data.submissions) {
@@ -594,33 +596,61 @@ function loadInitialTeacherReadStatus() {
 function connectStudentRealtime() {
     if (studentEventSource) studentEventSource.close();
     
-    studentEventSource = new EventSource(sseStudentUrl);
-    
-    studentEventSource.onmessage = function(event) {
-        const updates = JSON.parse(event.data);
-        updates.forEach(update => {
-            updateTeacherReadStatus(update.task_id, 1);
-            showStudentNotification(`"${update.task_title}" viewed by teacher!`);
-        });
-    };
-    
-    studentEventSource.onerror = function() {
-        console.log('Student SSE lost, polling fallback...');
+    try {
+        studentEventSource = new EventSource(sseStudentUrl);
+        
+        studentEventSource.onopen = function() {
+            console.log('SSE connection established');
+        };
+        
+        studentEventSource.onmessage = function(event) {
+            try {
+                const updates = JSON.parse(event.data);
+                updates.forEach(update => {
+                    updateTeacherReadStatus(update.task_id, 1);
+                    showStudentNotification(`"${update.task_title}" viewed by teacher!`);
+                });
+            } catch (e) {
+                console.log('Error parsing SSE message:', e);
+            }
+        };
+        
+        studentEventSource.onerror = function(event) {
+            console.log('Student SSE connection failed, using polling fallback...');
+            if (studentEventSource) {
+                studentEventSource.close();
+                studentEventSource = null;
+            }
+            startStudentPolling();
+        };
+    } catch (error) {
+        console.log('SSE not supported, using polling fallback');
         startStudentPolling();
-    };
+    }
 }
 
 function startStudentPolling() {
     if (studentPollInterval) clearInterval(studentPollInterval);
+    
     studentPollInterval = setInterval(() => {
-        fetch('sse_student.php')
-            .then(r => r.text())
-            .then(data => {
-                if (data.includes('"teacher_read":1')) {
-                    location.reload();
-                }
-            });
-    }, 15000);
+        const badges = document.querySelectorAll('.teacher-read-status[data-teacher-read="0"]');
+        badges.forEach(badge => {
+            const taskId = badge.dataset.taskId;
+            fetch(`<?= BASE_URL ?>tasks/get_submissions.php?task_id=${taskId}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.submissions) {
+                        const studentId = <?php echo $student_id; ?>;
+                        const submission = data.submissions.find(s => parseInt(s.student_id) === studentId);
+                        if (submission && submission.teacher_read == 1) {
+                            updateTeacherReadStatus(taskId, 1);
+                            showStudentNotification(`Task viewed by teacher!`);
+                        }
+                    }
+                })
+                .catch(err => console.log('Polling error:', err));
+        });
+    }, 30000);
 }
 
 function showStudentNotification(message, type = 'success') {
@@ -641,29 +671,6 @@ function showStudentNotification(message, type = 'success') {
     }, 6000);
 }
 
-// Init on load
-window.addEventListener('load', () => {
-    // Disable overdue submit buttons
-    document.querySelectorAll('.btn-submit').forEach(btn => {
-        const taskItem = btn.closest('.task-item');
-        if (taskItem && taskItem.dataset.isOverdue === 'true') {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-ban"></i> Overdue - Cannot Submit';
-            btn.style.backgroundColor = '#ef4444';
-            btn.style.opacity = '0.7';
-            btn.style.cursor = 'not-allowed';
-            btn.title = 'Task due date has passed. Cannot submit.';
-        }
-    });
-    connectStudentRealtime();
-    loadInitialTeacherReadStatus();
-});
-window.addEventListener('beforeunload', () => {
-    if (studentEventSource) studentEventSource.close();
-    if (studentPollInterval) clearInterval(studentPollInterval);
-});
-
-// Rest of JS unchanged...
 function toggleSection(type) {
     const content = document.getElementById('section-' + type + '-content');
     const header = document.querySelector('#section-' + type + ' .task-type-header');
@@ -701,22 +708,8 @@ function toggleSection(type) {
     }
 }
 
-function scrollToSection(subjectId) {
-    const sections = ['activities', 'homework', 'laboratory'];
-    for (let section of sections) {
-        const el = document.getElementById('section-' + section);
-        if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            if (document.getElementById('section-' + section + '-content').style.display === 'none') {
-                toggleSection(section);
-            }
-            break;
-        }
-    }
-}
-
 function viewTask(taskId) {
-    fetch('../task/get_task.php?id=' + taskId)
+    fetch('<?= BASE_URL ?>tasks/get_task.php?id=' + taskId)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.task) {
@@ -725,7 +718,7 @@ function viewTask(taskId) {
                 document.getElementById('viewTaskSubject').textContent = task.subject_name || 'N/A';
                 document.getElementById('viewTaskType').textContent = task.task_type ? task.task_type.charAt(0).toUpperCase() + task.task_type.slice(1) : 'N/A';
                 document.getElementById('viewTaskDescription').textContent = task.description || 'No description';
-                document.getElementById('viewTaskDate').textContent = task.created_at ? new Date(task.created_at).toLocaleDateString() : 'N/A';
+                document.getElementById('viewTaskDate').textContent = task.created_at_formatted || (task.created_at ? new Date(task.created_at).toLocaleDateString() : 'N/A');
                 
                 if (task.due_date) {
                     const dueDateRow = document.getElementById('viewDueDateRow');
@@ -743,7 +736,7 @@ function viewTask(taskId) {
                 
                 if (task.attachment) {
                     document.getElementById('viewAttachmentRow').style.display = 'block';
-                    document.getElementById('viewAttachmentLink').href = '../task/uploads/' + task.attachment;
+                    document.getElementById('viewAttachmentLink').href = '<?= BASE_URL ?>tasks/uploads/' + task.attachment;
                     document.getElementById('viewAttachmentName').textContent = task.original_filename || task.attachment;
                 } else {
                     document.getElementById('viewAttachmentRow').style.display = 'none';
@@ -751,7 +744,8 @@ function viewTask(taskId) {
                 
                 document.getElementById('viewTaskModal').classList.add('show');
             } else {
-                alert('Error loading task details');
+                console.error('Task detail error response:', data);
+                alert('Error loading task details: ' + (data.message || 'Unknown error'));
             }
         })
         .catch(error => {
@@ -764,14 +758,112 @@ function closeViewModal() {
     document.getElementById('viewTaskModal').classList.remove('show');
 }
 
+function viewMySubmission(taskId) {
+    console.log('Viewing submission for task ID:', taskId);
+    console.log('Student ID:', <?php echo $student_id; ?>);
+    
+    // Show loading state
+    const modal = document.getElementById('viewSubmissionModal');
+    const modalBody = modal.querySelector('.task-modal-body');
+    const originalContent = modalBody.innerHTML;
+    modalBody.innerHTML = '<div style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading submission...</div>';
+    modal.classList.add('show');
+    
+    fetch('<?= BASE_URL ?>tasks/get_submissions.php?task_id=' + taskId)
+        .then(response => response.json())
+        .then(data => {
+            console.log('API Response:', data);
+            
+            if (data.success && data.submissions && data.submissions.length > 0) {
+                const studentId = <?php echo $student_id; ?>;
+                const submission = data.submissions.find(s => parseInt(s.student_id) === studentId);
+                
+                if (submission) {
+                    console.log('Found submission:', submission);
+                    
+                    // Store submission data for edit/delete
+                    currentSubmissionData = {
+                        taskId: taskId,
+                        taskTitle: data.task.title,
+                        filePath: submission.file_path,
+                        originalFilename: submission.original_filename,
+                        notes: submission.notes,
+                        teacherRead: submission.teacher_read == 1
+                    };
+                    
+                    // Restore original modal content
+                    modalBody.innerHTML = originalContent;
+                    
+                    // Populate the modal with data
+                    document.getElementById('viewSubmissionTaskId').value = taskId;
+                    document.getElementById('submissionTaskTitle').textContent = data.task.title;
+                    document.getElementById('submissionDate').textContent = submission.submitted_at_formatted || new Date(submission.submitted_at).toLocaleString();
+                    
+                    // Handle notes (fix for "undefined" string)
+                    let notesText = submission.notes;
+                    if (!notesText || notesText === 'undefined' || notesText === 'null') {
+                        notesText = 'No notes provided';
+                    }
+                    document.getElementById('submissionNotes').textContent = notesText;
+                    
+                    // Handle file link
+                    const fileLink = document.getElementById('submissionFileLink');
+                    const fileNameSpan = document.getElementById('submissionFileName');
+                    if (submission.file_path && submission.file_path !== 'undefined') {
+                        fileLink.style.display = 'inline-flex';
+                        fileLink.href = '<?= BASE_URL ?>tasks/student_uploads/' + submission.file_path;
+                        const fileName = submission.original_filename || submission.file_path;
+                        fileNameSpan.textContent = fileName;
+                    } else {
+                        fileLink.style.display = 'none';
+                        fileNameSpan.textContent = 'No file uploaded';
+                    }
+                    
+                    // Show teacher read status
+                    const teacherStatus = document.getElementById('teacherReadStatus');
+                    if (submission.teacher_read == 1) {
+                        teacherStatus.innerHTML = '<i class="fas fa-eye" style="color: #10b981;"></i> Teacher has viewed your submission';
+                        teacherStatus.style.color = '#10b981';
+                        teacherStatus.style.backgroundColor = '#d1fae5';
+                    } else {
+                        teacherStatus.innerHTML = '<i class="fas fa-clock" style="color: #f59e0b;"></i> Awaiting teacher review';
+                        teacherStatus.style.color = '#f59e0b';
+                        teacherStatus.style.backgroundColor = '#fef3c7';
+                    }
+                    
+                    modal.classList.add('show');
+                } else {
+                    modalBody.innerHTML = `<div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #f59e0b;"></i>
+                        <p style="margin-top: 20px;">No submission found for you (Student ID: ${studentId})</p>
+                        <button onclick="location.reload()" class="btn-task" style="margin-top: 20px;">Refresh</button>
+                    </div>`;
+                }
+            } else {
+                modalBody.innerHTML = `<div style="text-align: center; padding: 40px;">
+                    <i class="fas fa-file-alt" style="font-size: 48px; color: #9ca3af;"></i>
+                    <p style="margin-top: 20px;">No submission found for this task.</p>
+                    <button onclick="closeViewSubmissionModal()" class="btn-task" style="margin-top: 20px;">Close</button>
+                </div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            modalBody.innerHTML = `<div style="text-align: center; padding: 40px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ef4444;"></i>
+                <p style="margin-top: 20px;">Error loading submission: ${error.message}</p>
+                <button onclick="closeViewSubmissionModal()" class="btn-task" style="margin-top: 20px;">Close</button>
+            </div>`;
+        });
+}
+
 function closeViewSubmissionModal() {
     document.getElementById('viewSubmissionModal').classList.remove('show');
 }
 
-// Submit Task
 function openSubmitModal(taskId, taskTitle, subjectName) {
-    const taskItem = document.querySelector(`.task-item[data-task-id="\${taskId}"][data-is-overdue="true"]`);
-    if (taskItem) {
+    const taskItem = document.querySelector(`.task-item[data-task-id="${taskId}"]`);
+    if (taskItem && taskItem.dataset.isOverdue === 'true') {
         alert('This task is overdue. You cannot submit after the due date.');
         return;
     }
@@ -808,14 +900,14 @@ document.getElementById('submitTaskForm').addEventListener('submit', function(e)
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
     submitBtn.disabled = true;
     
-    fetch('../task/student_submit_task.php', {
+    fetch('<?= BASE_URL ?>tasks/student_submit_task', {
         method: 'POST',
         body: formData
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-showStudentNotification('Your task has been submitted successfully! ✅');
+            showStudentNotification('Your task has been submitted successfully! ✅');
             closeSubmitModal();
             setTimeout(() => location.reload(), 2000);
         } else {
@@ -832,94 +924,6 @@ showStudentNotification('Your task has been submitted successfully! ✅');
     });
 });
 
-// Close modals on outside click
-document.addEventListener('click', function(event) {
-    if (event.target.classList.contains('task-modal')) {
-        event.target.classList.remove('show');
-    }
-});
-
-// Close on Escape key
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeViewModal();
-        closeViewSubmissionModal();
-        closeSubmitModal();
-        closeEditSubmissionModal();
-        closeDeleteSubmissionModal();
-    }
-});
-
-// Store current submission data for edit/delete
-let currentSubmissionData = null;
-
-// Enhanced View My Submission with teacher read indicator
-function viewMySubmission(taskId) {
-    fetch('../task/get_submissions.php?task_id=' + taskId)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.submissions && data.submissions.length > 0) {
-                const studentId = <?php echo $student_id; ?>;
-                const submission = data.submissions.find(s => parseInt(s.student_id) === studentId);
-                
-                if (submission) {
-                    currentSubmissionData = {
-                        taskId: taskId,
-                        taskTitle: data.task.title,
-                        filePath: submission.file_path,
-                        originalFilename: submission.original_filename,
-                        notes: submission.notes,
-                        teacherRead: submission.teacher_read == 1
-                    };
-                    
-                    document.getElementById('viewSubmissionTaskId').value = taskId;
-                    document.getElementById('submissionTaskTitle').textContent = data.task.title;
-                    document.getElementById('submissionDate').textContent = new Date(submission.submitted_at).toLocaleString();
-                    document.getElementById('submissionNotes').textContent = submission.notes || 'No notes';
-                    
-                    if (submission.file_path) {
-                        document.getElementById('submissionFileLink').style.display = 'inline-flex';
-                        document.getElementById('submissionFileLink').href = '../task/student_uploads/' + submission.file_path;
-                        document.getElementById('submissionFileName').textContent = submission.original_filename || submission.file_path;
-                    } else {
-                        document.getElementById('submissionFileLink').style.display = 'none';
-                    }
-                    
-                    // NEW: Show teacher read status in modal
-                    const teacherStatus = document.getElementById('teacherReadStatus') || createTeacherStatus();
-                    if (submission.teacher_read == 1) {
-                        teacherStatus.innerHTML = '<i class="fas fa-eye text-success"></i> Teacher has viewed your submission';
-                        teacherStatus.style.color = '#10b981';
-                    } else {
-                        teacherStatus.innerHTML = '<i class="fas fa-clock text-warning"></i> Awaiting teacher review';
-                        teacherStatus.style.color = '#f59e0b';
-                    }
-                    
-                    document.getElementById('viewSubmissionModal').classList.add('show');
-                } else {
-                    alert('Your submission not found');
-                }
-            } else {
-                alert('No submission found for this task');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error loading submission');
-        });
-}
-
-// NEW: Create teacher status element
-function createTeacherStatus() {
-    const div = document.createElement('div');
-    div.id = 'teacherReadStatus';
-    div.style.cssText = 'margin-top: 15px; padding: 10px; border-radius: 6px; background: var(--slate-50); font-weight: 500; display: flex; align-items: center; gap: 8px;';
-    const container = document.querySelector('#viewSubmissionModal .task-modal-body');
-    container.appendChild(div);
-    return div;
-}
-
-// Rest of functions (edit, delete) unchanged...
 function openEditSubmissionModal() {
     if (!currentSubmissionData) {
         alert('No submission data available');
@@ -932,9 +936,9 @@ function openEditSubmissionModal() {
     document.getElementById('editSubmissionTaskTitle').textContent = currentSubmissionData.taskTitle;
     document.getElementById('editSubmissionNotes').value = currentSubmissionData.notes || '';
     
-    if (currentSubmissionData.filePath) {
+    if (currentSubmissionData.filePath && currentSubmissionData.filePath !== 'undefined') {
         document.getElementById('editCurrentFileLink').style.display = 'inline-flex';
-        document.getElementById('editCurrentFileLink').href = '../task/student_uploads/' + currentSubmissionData.filePath;
+        document.getElementById('editCurrentFileLink').href = '<?= BASE_URL ?>tasks/student_uploads/' + currentSubmissionData.filePath;
         document.getElementById('editCurrentFileName').textContent = currentSubmissionData.originalFilename || currentSubmissionData.filePath;
     } else {
         document.getElementById('editCurrentFileLink').style.display = 'none';
@@ -965,7 +969,7 @@ document.getElementById('editSubmissionForm').addEventListener('submit', functio
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
     submitBtn.disabled = true;
     
-    fetch('../task/update_submission.php', {
+    fetch('<?= BASE_URL ?>tasks/update_submission', {
         method: 'POST',
         body: formData
     })
@@ -1008,7 +1012,7 @@ function confirmDeleteSubmission() {
         return;
     }
     
-    fetch('../task/delete_submission.php', {
+    fetch('<?= BASE_URL ?>tasks/delete_submission', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1018,7 +1022,7 @@ function confirmDeleteSubmission() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-showStudentNotification('Submission deleted successfully!', 'error');
+            showStudentNotification('Submission deleted successfully!', 'error');
             closeDeleteSubmissionModal();
             setTimeout(() => location.reload(), 2000);
         } else {
@@ -1031,17 +1035,87 @@ showStudentNotification('Submission deleted successfully!', 'error');
     });
 }
 
-function quickDeleteSubmission(taskId, taskTitle) {
-    currentSubmissionData = {
-        taskId: taskId,
-        taskTitle: taskTitle
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('task-modal')) {
+        event.target.classList.remove('show');
+    }
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeViewModal();
+        closeViewSubmissionModal();
+        closeSubmitModal();
+        closeEditSubmissionModal();
+        closeDeleteSubmissionModal();
+    }
+});
+
+window.addEventListener('load', () => {
+    document.querySelectorAll('.task-item').forEach(taskItem => {
+        const isOverdue = taskItem.dataset.isOverdue === 'true';
+        if (!isOverdue) return;
+
+        // Block submit button
+        const submitBtn = taskItem.querySelector('.btn-submit');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-ban"></i> Overdue – Cannot Submit';
+            submitBtn.style.backgroundColor = '#ef4444';
+            submitBtn.style.opacity = '0.7';
+            submitBtn.style.cursor = 'not-allowed';
+            submitBtn.title = 'Task due date has passed. Cannot submit.';
+        }
+
+        // Block edit & delete on submitted tasks (the "View Submission" button stays,
+        // but we override the modal buttons after open via a flag)
+        taskItem.dataset.overdueLocked = 'true';
+    });
+
+    // Intercept openEditSubmissionModal / openDeleteSubmissionModal for overdue tasks
+    const _origOpenEdit = window.openEditSubmissionModal;
+    window.openEditSubmissionModal = function() {
+        if (currentSubmissionData) {
+            const taskItem = document.querySelector(`.task-item[data-task-id="${currentSubmissionData.taskId}"]`);
+            if (taskItem && taskItem.dataset.overdueLocked === 'true') {
+                showStudentNotification('This task is overdue. You cannot edit your submission.', 'error');
+                return;
+            }
+        }
+        if (_origOpenEdit) _origOpenEdit();
     };
+
+    const _origOpenDelete = window.openDeleteSubmissionModal;
+    window.openDeleteSubmissionModal = function() {
+        if (currentSubmissionData) {
+            const taskItem = document.querySelector(`.task-item[data-task-id="${currentSubmissionData.taskId}"]`);
+            if (taskItem && taskItem.dataset.overdueLocked === 'true') {
+                showStudentNotification('This task is overdue. You cannot delete your submission.', 'error');
+                return;
+            }
+        }
+        if (_origOpenDelete) _origOpenDelete();
+    };
+
+    connectStudentRealtime();
+    loadInitialTeacherReadStatus();
     
-    document.getElementById('deleteSubmissionTaskTitle').textContent = taskTitle;
-    
-    document.getElementById('deleteSubmissionModal').classList.add('show');
-}
-    </script>
+    if (document.querySelector('#section-activities .task-item')) {
+        document.getElementById('section-activities-content').style.display = 'block';
+    }
+    if (document.querySelector('#section-homework .task-item')) {
+        document.getElementById('section-homework-content').style.display = 'block';
+    }
+    if (document.querySelector('#section-laboratory .task-item')) {
+        document.getElementById('section-laboratory-content').style.display = 'block';
+    }
+});
+
+window.addEventListener('beforeunload', () => {
+    if (studentEventSource) studentEventSource.close();
+    if (studentPollInterval) clearInterval(studentPollInterval);
+});
+</script>
 
 </body>
 </html>

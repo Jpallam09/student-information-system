@@ -54,7 +54,7 @@ $active_sem = getActiveSemester($conn);
     </div>
     
     <div style="flex-shrink: 0;">
-        <button onclick="window.open('../admin/manage_school_year.php', '_blank')" 
+        <button onclick="window.open('<?= BASE_URL ?>admin/manage_school_year.php', '_blank')"
                 style="
                     background: #f59e0b; 
                     color: white; 

@@ -15,9 +15,8 @@ function getTeacherYearLevels() {
     foreach ($levels as $level) {
         $level = trim($level);
         if (!empty($level)) {
-            // Normalize: "2nd year" -> "2nd Year", "4thyear" -> "4th Year"
             $level = ucwords(strtolower($level));
-            if (!preg_match('/\bYear$/i', $level)) {
+            if (!preg_match('/\\bYear$/i', $level)) {
                 $level .= ' Year';
             }
             $normalized[] = $level;
@@ -43,52 +42,114 @@ function getTeacherSections() {
     return $normalized;
 }
 
-// Build SQL WHERE clause for year level filtering
-function getYearLevelFilter($column = 'year_level') {
-    $year_levels = getTeacherYearLevels();
-    if (empty($year_levels)) {
-        return ''; // No restriction - show all
+// Manual year level filter (GET)
+function getYearLevelFilter($column, &$params, &$types) {
+    if (!empty($_GET['year_level'])) {
+        $allowed_years = ['1st Year','2nd Year','3rd Year','4th Year'];
+        $year = $_GET['year_level'];
+        if (!in_array($year, $allowed_years)) {
+            return '';
+        }
+        $params[] = $year;
+        $types .= 's';
+        return " AND $column = ? ";
     }
-    
-    $escaped = array_map(function($y) use ($column) {
-        global $conn;
-        return "'" . mysqli_real_escape_string($conn, trim($y)) . "'";
-    }, $year_levels);
-    
-    return " AND $column IN (" . implode(',', $escaped) . ")";
+    return '';
 }
 
-// Build SQL WHERE clause for section filtering
-function getSectionFilter($column = 'section') {
-    $sections = getTeacherSections();
-    if (empty($sections)) {
-        return ''; // No restriction - show all
+// Manual section filter (GET)
+function getSectionFilter($column, &$params, &$types) {
+    if (!empty($_GET['section'])) {
+        $section = $_GET['section'];
+        if (!preg_match('/^[A-Za-z0-9\\-]+$/', $section)) {
+            return '';
+        }
+        $params[] = $section;
+        $types .= 's';
+        return " AND $column = ? ";
     }
-    
-    $escaped = array_map(function($s) use ($column) {
-        global $conn;
-        $s = trim($s);
-        return "'" . mysqli_real_escape_string($conn, $s) . "'";
-    }, $sections);
-    
-    return " AND $column IN (" . implode(',', $escaped) . ")";
+    return '';
 }
 
-// Get combined filter for both year level and section
-function getTeacherFilter($yearColumn = 'year_level', $sectionColumn = 'section') {
-    $filter = getYearLevelFilter($yearColumn);
-    $filter .= getSectionFilter($sectionColumn);
+// AUTO filter: teacher's year levels (literal IN)
+function getAutoTeacherYearFilter($column) {
+    $admin_types = ['Seeder', 'Administrator'];
+    $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
+    if ($is_admin || empty($years = getTeacherYearLevels())) {
+        return '';
+    }
+    $quoted_years = [];
+    foreach ($years as $year) {
+        $quoted_years[] = "'" . addslashes($year) . "'";
+    }
+    return " AND $column IN (" . implode(',', $quoted_years) . ") ";
+}
+
+// COMBINED year filter (auto + manual)
+function getCombinedYearFilter($column, &$params, &$types) {
+    $filter = getAutoTeacherYearFilter($column);
+    $filter .= getYearLevelFilter($column, $params, $types);
     return $filter;
 }
 
-// Check if teacher has any assignments
+// AUTO section filter
+function getAutoTeacherSectionFilter($column) {
+    $admin_types = ['Seeder', 'Administrator'];
+    $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
+    if ($is_admin || empty($sections = getTeacherSections())) {
+        return '';
+    }
+    $quoted_sections = [];
+    foreach ($sections as $sec) {
+        $quoted_sections[] = "'" . addslashes($sec) . "'";
+    }
+    return " AND $column IN (" . implode(',', $quoted_sections) . ") ";
+}
+
+// COMBINED section filter
+function getCombinedSectionFilter($column, &$params, &$types) {
+    $filter = getAutoTeacherSectionFilter($column);
+    $filter .= getSectionFilter($column, $params, $types);
+    return $filter;
+}
+
+// Dropdown years for teachers (assigned or all)
+function getTeacherDropdownYears() {
+    $admin_types = ['Seeder', 'Administrator'];
+    $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
+    if ($is_admin || empty($years = getTeacherYearLevels())) {
+        return ['1st Year','2nd Year','3rd Year','4th Year'];
+    }
+    return $years;
+}
+
+// Dropdown sections
+function getTeacherDropdownSections() {
+    $admin_types = ['Seeder', 'Administrator'];
+    $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
+    if ($is_admin || empty($sections = getTeacherSections())) {
+        return [];
+    }
+    return $sections;
+}
+
+// Legacy
+function getTeacherFilter($yearColumn = 'year_level', $sectionColumn = 'section') {
+    $params = [];
+    $types = '';
+    $filter = getYearLevelFilter($yearColumn, $params, $types);
+    $filter .= getSectionFilter($sectionColumn, $params, $types);
+    return $filter;
+}
+
+// Has assignments
 function hasTeacherAssignments() {
     $year_levels = getTeacherYearLevels();
     $sections = getTeacherSections();
     return !empty($year_levels) || !empty($sections);
 }
 
-// Get teacher's assignments display string
+// Display string
 function getTeacherAssignmentDisplay() {
     $year_levels = getTeacherYearLevels();
     $sections = getTeacherSections();
@@ -103,4 +164,4 @@ function getTeacherAssignmentDisplay() {
     
     return empty($display) ? "All" : implode(' | ', $display);
 }
-
+?>

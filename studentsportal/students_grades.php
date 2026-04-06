@@ -1,62 +1,79 @@
 <?php
 session_start();
-include '../config/database.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once CONFIG_PATH . 'database.php';
 
 // Ensure student is logged in
-if(!isset($_SESSION['student_id'])){
-    header("Location: ../Accesspage/student_login.php");
+if (!isset($_SESSION['student_id'])) {
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
     exit();
 }
 
-$student_id = $_SESSION['student_id'];
+$student_id = intval($_SESSION['student_id']);
 
 // Fetch student info
-$student_query = mysqli_query($conn, "SELECT * FROM students WHERE id='$student_id'");
-$student = mysqli_fetch_assoc($student_query);
+$stmt = $conn->prepare("SELECT * FROM students WHERE id = ?");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$student = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if (!$student) {
+    session_destroy();
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
+    exit();
+}
 
 // GPA
 $gpa = $student['gpa'] ?? 0;
 
 /* =========================
-   FIX: GET COURSE ID
+   GET COURSE ID
 ========================= */
-$course_name = $student['course'];
-$course_result = mysqli_query($conn,"SELECT id FROM courses WHERE course_name='$course_name'");
-$course_row = mysqli_fetch_assoc($course_result);
-$course_id = $course_row['id'];
-
+$course_name     = $student['course'];
 $student_section = $student['section'];
+$year_level      = $student['year_level'];
+
+$stmt = $conn->prepare("SELECT id FROM courses WHERE course_name = ?");
+$stmt->bind_param("s", $course_name);
+$stmt->execute();
+$course_row = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+$course_id = $course_row['id'] ?? 0;
 
 /* =========================
    FETCH SUBJECTS + GRADES
 ========================= */
-$subjects_query = mysqli_query($conn,
-    "SELECT s.code AS subject_code, 
+$stmt = $conn->prepare(
+    "SELECT s.code AS subject_code,
             s.subject_name,
-            g.quiz, g.homework, g.activities, 
-            g.prelim, g.midterm, g.final, 
+            g.quiz, g.homework, g.activities,
+            g.prelim, g.midterm, g.final,
             g.lab, g.letter_grade
      FROM subjects s
-     LEFT JOIN grades g 
-        ON g.subject_id = s.id 
-        AND g.student_id = '$student_id'
-     WHERE s.course_id='$course_id'
-     AND s.year_level='{$student['year_level']}'
-     AND s.section='$student_section'
+     LEFT JOIN grades g
+        ON g.subject_id = s.id
+        AND g.student_id = ?
+     WHERE s.course_id = ?
+       AND s.year_level = ?
+       AND s.section = ?
      ORDER BY s.subject_name ASC"
 );
+$stmt->bind_param("iiss", $student_id, $course_id, $year_level, $student_section);
+$stmt->execute();
+$subjects_result = $stmt->get_result();
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>Grades & Assessments - Student Portal</title>
-    <link rel="stylesheet" href="../css/studentportal.css">
+     <link rel="stylesheet" href="<?= asset('css/studentportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
-<?php include 'students_sidebar.php'; ?>
+<?php include PROJECT_ROOT . '/studentsportal/students_sidebar.php'; ?>
 
 <div class="main-content">
 
@@ -102,7 +119,7 @@ $subjects_query = mysqli_query($conn,
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while($sub = mysqli_fetch_assoc($subjects_query)): 
+                    <?php while($sub = $subjects_result->fetch_assoc()): 
                         $grade = $sub['letter_grade'] ?? '-';
                         if(in_array($grade, ["1.0","1.25","1.5"])) $badge="badge-green";
                         elseif(in_array($grade, ["1.75","2.0"])) $badge="badge-blue";

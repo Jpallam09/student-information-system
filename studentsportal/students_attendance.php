@@ -1,58 +1,87 @@
 <?php
 session_start();
-include '../config/database.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
 
-// ✅ Check if student is logged in
-if(!isset($_SESSION['student_id'])){
-    header("Location: ../Accesspage/student_login.php");
+if (!isset($_SESSION['student_id'])) {
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
     exit();
 }
 
 $student_id = $_SESSION['student_id'];
 
-// ✅ Fetch student info (optional if needed)
-$student_query = mysqli_query($conn,"SELECT * FROM students WHERE id='$student_id'");
-$student = mysqli_fetch_assoc($student_query);
+/* ================= STUDENT INFO ================= */
+$stmt = $conn->prepare("SELECT * FROM students WHERE id = ?");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$student = $result->fetch_assoc();
 
-// ✅ Fetch attendance records from database
-$attendance_query = mysqli_query($conn, "SELECT * FROM attendance WHERE student_id='$student_id' ORDER BY date DESC");
+if (!$student) {
+    die("Student not found.");
+}
 
-// Initialize counters
+/* ================= ATTENDANCE ================= */
+$stmt = $conn->prepare("
+    SELECT * 
+    FROM attendance 
+    WHERE student_id = ? 
+    ORDER BY date DESC
+");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$attendance_query = $stmt->get_result();
+
+if (!$attendance_query) {
+    die("Error fetching attendance.");
+}
+
+/* ================= PROCESS DATA ================= */
 $totalDays = 0;
 $present = 0;
 $absent = 0;
 $recentDays = [];
 
-while($row = mysqli_fetch_assoc($attendance_query)){
-    $totalDays++;
-    if($row['status'] == 'present'){
-        $present++;
-    } elseif($row['status'] == 'absent'){
-        $absent++;
+/* ---- SAFE PROCESSING ---- */
+while ($row = $attendance_query->fetch_assoc()) {
+
+    // ✅ Skip invalid or empty dates (PREVENT strtotime crash)
+    if (empty($row['date']) || !strtotime($row['date'])) {
+        continue;
     }
 
-    // Collect last 10 days
-    if(count($recentDays) < 10){
-        $recentDays[] = [
-            'date' => $row['date'],
-            'status' => $row['status']
-        ];
+    $totalDays++;
+
+    if (isset($row['status'])) {
+        if ($row['status'] === 'present') {
+            $present++;
+        } elseif ($row['status'] === 'absent') {
+            $absent++;
+        }
+    }
+
+    // Get last 10 records only
+    if (count($recentDays) < 10) {
+        $recentDays[] = $row;
     }
 }
 
-// Avoid division by zero
-$attendanceRate = $totalDays ? round(($present / $totalDays) * 100) : 0;
+/* ---- SAFE PERCENTAGE ---- */
+$attendanceRate = ($totalDays > 0) 
+    ? round(($present / $totalDays) * 100) 
+    : 0;
+
 ?>
 <!DOCTYPE html>
 <html>
 <head>
     <title>My Attendance</title>
-    <link rel="stylesheet" href="../css/studentportal.css">
+    <link rel="stylesheet" href="<?php echo asset('css/studentportal.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
-<?php include 'students_sidebar.php'; ?>
+<?php include PROJECT_ROOT . '/studentsportal/students_sidebar.php'; ?>
 
 <div class="main-content">
 
@@ -103,21 +132,40 @@ $attendanceRate = $totalDays ? round(($present / $totalDays) * 100) : 0;
             <h3 class="card-title">Recent Attendance</h3>
             <p class="card-description">Your last 10 school days</p>
         </div>
+
         <div class="card-content">
-            <?php foreach($recentDays as $day):
-                $color = $day['status']=='present'?'green':'red';
-                $icon = $day['status']=='present'?'check-circle':'times-circle';
-            ?>
-            <div class="attendance-row">
-                <div class="attendance-left">
-                    <i class="fas fa-<?php echo $icon; ?> text-<?php echo $color; ?>"></i>
-                    <p><?php echo date('l, F j, Y', strtotime($day['date'])); ?></p>
+
+            <?php if (!empty($recentDays)): ?>
+
+                <?php foreach($recentDays as $day):
+
+                    // ✅ Final safety check before displaying date
+                    if (empty($day['date']) || !strtotime($day['date'])) {
+                        continue;
+                    }
+
+                    $status = isset($day['status']) ? $day['status'] : 'unknown';
+
+                    $color = ($status === 'present') ? 'green' : 'red';
+                    $icon = ($status === 'present') ? 'check-circle' : 'times-circle';
+                ?>
+
+                <div class="attendance-row">
+                    <div class="attendance-left">
+                        <i class="fas fa-<?php echo $icon; ?> text-<?php echo $color; ?>"></i>
+                        <p><?php echo date('l, F j, Y', strtotime($day['date'])); ?></p>
+                    </div>
+                    <span class="badge badge-<?php echo $color; ?>">
+                        <?php echo ucfirst($status); ?>
+                    </span>
                 </div>
-                <span class="badge badge-<?php echo $color; ?>">
-                    <?php echo ucfirst($day['status']); ?>
-                </span>
-            </div>
-            <?php endforeach; ?>
+
+                <?php endforeach; ?>
+
+            <?php else: ?>
+                <p>No attendance records found.</p>
+            <?php endif; ?>
+
         </div>
     </div>
 
@@ -128,6 +176,7 @@ $attendanceRate = $totalDays ? round(($present / $totalDays) * 100) : 0;
                 <i class="fas fa-calendar-alt"></i> Attendance Policy
             </h3>
         </div>
+
         <div class="card-content">
             <ul class="policy-list">
                 <li>Minimum 75% attendance required for final exams</li>

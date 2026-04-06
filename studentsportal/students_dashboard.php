@@ -1,15 +1,22 @@
 <?php
-session_start();
-include '../config/database.php';
-include '../config/current_school_year.php';
+session_start([
+    'cookie_httponly' => true,
+    'cookie_secure' => true,
+    'cookie_samesite' => 'Strict'
+]);
 
-// ✅ Check if student is logged in
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once CONFIG_PATH . 'database.php';
+require_once CONFIG_PATH . 'current_school_year.php';
+
+// ✅ Check if student is logged in + DEBUG
 if(!isset($_SESSION['student_id'])){
-    header("Location: ../Accesspage/student_login.php");
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
     exit();
 }
+// Session active: student_id = " . $_SESSION['student_id'];
 
-$student_id = mysqli_real_escape_string($conn, $_SESSION['student_id']);
+$student_id = intval($_SESSION['student_id']);
 
 // Check inactive enrollment
 $is_inactive = ($_SESSION['inactive_enrollment'] ?? false);
@@ -19,33 +26,32 @@ $active_sem = getActiveSemester($conn);
 // ============================================
 // FETCH STUDENT INFO
 // ============================================
-$student_query = mysqli_query($conn, "SELECT * FROM students WHERE id='$student_id'");
-if (!$student_query) {
-    error_log("Student query failed: " . mysqli_error($conn));
-    die("Database error");
-}
-$student = mysqli_fetch_assoc($student_query);
+$stmt = $conn->prepare("SELECT * FROM students WHERE id = ?");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$student = $result->fetch_assoc();
 
 if (!$student) {
+// DEBUG REMOVED: Student not found handled
     session_destroy();
-    header("Location: ../Accesspage/student_login.php");
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
     exit();
 }
+// Student found: " . $student['student_id'];
 
 $student_name = htmlspecialchars($student['first_name'] . ' ' . $student['last_name']);
-$course_name = mysqli_real_escape_string($conn, $student['course']);
-$year_level = mysqli_real_escape_string($conn, $student['year_level']);
-$section = mysqli_real_escape_string($conn, $student['section']);
+$course_name = $student['course'];
+$year_level = $student['year_level'];
+$section = $student['section'];
 
 // Get course ID for querying
-$course_result = mysqli_query($conn, "SELECT id FROM courses WHERE course_name='$course_name'");
-if (!$course_result) {
-    error_log("Course query failed: " . mysqli_error($conn));
-    $course_id = 0;
-} else {
-    $course_row = mysqli_fetch_assoc($course_result);
-    $course_id = $course_row['id'] ?? 0;
-}
+$stmt = $conn->prepare("SELECT id FROM courses WHERE course_name = ?");
+$stmt->bind_param("s", $course_name);
+$stmt->execute();
+$result = $stmt->get_result();
+$course_row = $result->fetch_assoc();
+$course_id = $course_row['id'] ?? 0;
 
 // ============================================
 // CALCULATE GPA DYNAMICALLY
@@ -53,82 +59,95 @@ if (!$course_result) {
 $gpa = 0;
 $gpa_change = 0;
 
-$gpa_query = mysqli_query($conn, "
+$stmt = $conn->prepare("
     SELECT g.letter_grade 
     FROM grades g
     JOIN subjects s ON g.subject_id = s.id
-    WHERE g.student_id = '$student_id' 
-    AND s.course_id = '$course_id'
-    AND s.year_level = '$year_level'
-    AND (s.section = '$section' OR s.section IS NULL OR s.section = '')
+    WHERE g.student_id = ? 
+    AND s.course_id = ?
+    AND s.year_level = ?
+    AND (s.section = ? OR s.section IS NULL OR s.section = '')
 ");
-if ($gpa_query) {
-    $grades_array = [];
-    while($g = mysqli_fetch_assoc($gpa_query)){
-        if($g['letter_grade'] && is_numeric($g['letter_grade'])){
-            $grades_array[] = floatval($g['letter_grade']);
-        }
+$stmt->bind_param("iiss", $student_id, $course_id, $year_level, $section);
+$stmt->execute();
+$result = $stmt->get_result();
+$grades_array = [];
+while($g = $result->fetch_assoc()){
+    if($g['letter_grade'] && is_numeric($g['letter_grade'])){
+        $grades_array[] = floatval($g['letter_grade']);
     }
+}
 
-    if(count($grades_array) > 0){
-        $gpa = round(array_sum($grades_array) / count($grades_array), 2);
-        $gpa_change = round((max($grades_array) - min($grades_array)) / 10, 1);
-    }
-} else {
-    error_log("GPA query failed: " . mysqli_error($conn));
+if(count($grades_array) > 0){
+    $gpa = round(array_sum($grades_array) / count($grades_array), 2);
+    $gpa_change = round((max($grades_array) - min($grades_array)) / 10, 1);
 }
 
 // ============================================
 // CALCULATE ATTENDANCE RATE
 // ============================================
-$attendance_query = mysqli_query($conn, "SELECT status FROM attendance WHERE student_id='$student_id'");
+$stmt = $conn->prepare("
+    SELECT status 
+    FROM attendance 
+    WHERE student_id = ?
+");
+$stmt->bind_param("i", $student_id);
+$stmt->execute();
+$attendance_query = $stmt->get_result();
+
 $attendance_rate = 0;
 $total_classes = 0;
 $present_classes = 0;
+
 if ($attendance_query) {
-    while($att = mysqli_fetch_assoc($attendance_query)){
+    while($att = $attendance_query->fetch_assoc()){
         $total_classes++;
-        if($att['status'] == 'present'){
+
+        if ($att['status'] == 'present'){
             $present_classes++;
         }
     }
-    $attendance_rate = $total_classes > 0 ? round(($present_classes / $total_classes) * 100) : 0;
-}
 
+    $attendance_rate = $total_classes > 0 
+        ? round(($present_classes / $total_classes) * 100) 
+        : 0;
+}
 // ============================================
 // COUNT ACTIVE SUBJECTS
 // ============================================
 $subjects_count = 0;
-$subjects_query = mysqli_query($conn, "
+$stmt = $conn->prepare("
     SELECT COUNT(*) as total FROM subjects 
-    WHERE course_id = '$course_id' 
-    AND year_level = '$year_level'
-    AND (section = '$section' OR section IS NULL OR section = '')
+    WHERE course_id = ? 
+    AND year_level = ? 
+    AND (section = ? OR section IS NULL OR section = '')
 ");
-if ($subjects_query && $subj = mysqli_fetch_assoc($subjects_query)){
-    $subjects_count = $subj['total'];
-}
-
+$stmt->bind_param("iss", $course_id, $year_level, $section);
+$stmt->execute();
+$result = $stmt->get_result();
+$subjects_count = $result->fetch_assoc()['total'];
 // ============================================
 // FETCH UPCOMING TASKS
 // ============================================
 $upcoming_tasks = [];
 $task_ids = [];
 
-$subject_ids_query = mysqli_query($conn, "
+$stmt = $conn->prepare("
     SELECT id FROM subjects 
-    WHERE course_id = '$course_id' 
-    AND year_level = '$year_level'
-    AND (section = '$section' OR section IS NULL OR section = '')
+    WHERE course_id = ? 
+    AND year_level = ?
+    AND (section = ? OR section IS NULL OR section = '')
 ");
-if ($subject_ids_query) {
-    while($sid = mysqli_fetch_assoc($subject_ids_query)){
-        $task_ids[] = $sid['id'];
-    }
-}
+$stmt->bind_param("iss", $course_id, $year_level, $section);
+$stmt->execute();
+$result = $stmt->get_result();
 
 if(!empty($task_ids)){
     $task_ids_str = implode(',', array_map('intval', $task_ids));
+
+    while($row = $result->fetch_assoc()){
+    $task_ids[] = $row['id'];
+}
     
     $tasks_query = mysqli_query($conn, "
         SELECT t.*, s.subject_name
@@ -196,19 +215,22 @@ if ($chart_query) {
 // FETCH RECENT ANNOUNCEMENTS
 // ============================================
 $announcements = [];
-$course_esc = mysqli_real_escape_string($conn, $course_name);
-$ann_query = mysqli_query($conn, "
+$stmt = $conn->prepare("
     SELECT * FROM announcements 
-    WHERE (course_id = '$course_esc' OR course_id = 'ALL')
-    AND (year_level = '$year_level' OR year_level = 'All')
-    AND (section = '$section' OR section = 'All' OR section = '')
+    WHERE (course_id = ? OR course_id = 'ALL')
+    AND (year_level = ? OR year_level = 'All')
+    AND (section = ? OR section = 'All' OR section = '')
     ORDER BY pinned DESC, created_at DESC
     LIMIT 3
 ");
-if ($ann_query) {
-    while($ann = mysqli_fetch_assoc($ann_query)){
-        $announcements[] = $ann;
-    }
+
+$stmt->bind_param("iss", $course_id, $year_level, $section);
+$stmt->execute();
+$result = $stmt->get_result();
+
+$announcements = [];
+while($ann = $result->fetch_assoc()){
+    $announcements[] = $ann;
 }
 ?>
 
@@ -218,7 +240,7 @@ if ($ann_query) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard</title>
-    <link rel="stylesheet" href="../css/studentportal.css">
+    <link rel="stylesheet" href="<?php echo asset('css/studentportal.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -226,16 +248,16 @@ if ($ann_query) {
 
 <!-- Top Right Logo -->
 <div style="position: fixed; top: 15px; right: 20px; z-index: 9999;">
-    <img src="../images/622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 50px; display: block; margin: 40px auto 15px auto; border-radius: 5px; animation: float 3s ease-in-out infinite;">
+    <img src="<?php echo WEB_IMAGES; ?>622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 50px; display: block; margin: 40px auto 15px auto; border-radius: 5px; animation: float 3s ease-in-out infinite;">
 </div>
 
-<?php include 'students_sidebar.php'; ?>
+<?php include PROJECT_ROOT . '/studentsportal/students_sidebar.php'; ?>
 
 <div class="main-content">
 
     <!-- Inactive Warning (if applicable) -->
     <?php if ($is_inactive): ?>
-        <?php include 'components/inactive_warning.php'; ?>
+       <?php include PROJECT_ROOT . '/studentsportal/components/inactive_warning.php'; ?>
     <?php endif; ?>
     
     <!-- Page Header -->

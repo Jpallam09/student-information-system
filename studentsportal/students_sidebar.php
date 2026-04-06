@@ -1,12 +1,13 @@
 <?php
-// session_start();
-// if(!isset($_SESSION['student_id'])) {
-//     header("Location: ../Accesspage/student_login.php");
-//     exit();
-// }
+require_once dirname(__DIR__) . '/config/paths.php';
+
+if (!isset($_SESSION['student_id'])) {
+    header("Location: " . BASE_URL . "Accesspage/student_login.php");
+    exit();
+}
 
 // Get current page filename
-$current_page = basename($_SERVER['PHP_SELF']);
+$current = basename($_SERVER['PHP_SELF']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -14,12 +15,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Dashboard</title>
-    <link rel="stylesheet" href="../css/studentportal.css">
+<link rel="stylesheet" href="<?php echo asset('css/studentportal.css'); ?>">
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
     <!-- Hamburger Menu Button (Mobile) -->
-    <button class="hamburger-btn" id="hamburgerBtn">
+    <button class="hamburger-btn" id="hamburgerBtn" style="display: none;">
         <i class="fas fa-bars"></i>
     </button>
     
@@ -32,11 +33,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <i class="fas fa-sign-out-alt"></i>
     </a>
         <div class="sidebar-header">
-            <img src="../images/622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 80px; display: block; margin: 40px auto 15px auto;border-radius: 5px; animation: float 3s ease-in-out infinite;">
+<img src="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>" alt="School Logo" style="width: 70px; display: block; margin: 40px auto 15px auto;border-radius: 5px; animation: float 3s ease-in-out infinite;">
 <h2 style="margin-top: 5px;"><i class="fas fa-graduation-cap"></i>Student's Portal</h2>
 <p class="sidebar-sub">
     <?php 
-    include_once '../config/current_school_year.php'; 
+
+include_once PROJECT_ROOT . '/config/current_school_year.php';
     $active_year = getActiveSchoolYear($conn) ?? 'Academic Year Not Set'; 
     $active_sem = getActiveSemester($conn) ?? ''; 
     
@@ -54,31 +56,30 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </div>
 
         <div class="menu">
-            <a href="/STUDENT%20INFO/studentsportal/students_dashboard.php" class="<?= $current=='students_dashboard.php'?'active':'' ?>">
+           <a href="<?php echo BASE_URL; ?>studentsportal/students_dashboard.php" class="<?= $current=='students_dashboard.php'?'active':'' ?>">
         <i class="fas fa-th-large"></i> Dashboard
     </a>
-            <a href="/STUDENT%20INFO/studentsportal/students_profile.php" class="<?= $current=='students_profile.php'?'active':'' ?>">
+            <a href="<?php echo BASE_URL; ?>studentsportal/students_profile.php" class="<?= $current=='students_profile.php'?'active':'' ?>">
         <i class="fas fa-user"></i> My Profile
     </a>
-            <a href="/STUDENT%20INFO/studentsportal/students_grades.php" class="<?= $current=='students_grades.php'?'active':'' ?>">
+            <a href="<?php echo BASE_URL; ?>studentsportal/students_grades.php" class="<?= $current=='students_grades.php'?'active':'' ?>">
         <i class="fas fa-chart-line"></i> My Grades
     </a>
-            <a href="/STUDENT%20INFO/studentsportal/students_classSchedule.php" class="<?= $current=='students_classSchedule.php'?'active':'' ?>">
+            <a href="<?php echo BASE_URL; ?>studentsportal/students_classSchedule.php" class="<?= $current=='students_classSchedule.php'?'active':'' ?>">
         <i class="fas fa-calendar-alt"></i> My Class Schedules
     </a>
-            <a href="/STUDENT%20INFO/studentsportal/students_subjects&teachers.php" class="<?= $current=='students_subjects&teachers.php'?'active':'' ?>">
+            <a href="<?php echo BASE_URL; ?>studentsportal/students_subjects&teachers.php" class="<?= $current=='students_subjects_teachers.php'?'active':'' ?>">
         <i class="fas fa-book"></i> Subjects & Teachers
     </a>
-            <a href="/STUDENT%20INFO/studentsportal/students_attendance.php" class="<?= $current=='students_attendance.php'?'active':'' ?>">
+            <a href="<?php echo BASE_URL; ?>studentsportal/students_attendance.php" class="<?= $current=='students_attendance.php'?'active':'' ?>">
         <i class="fas fa-calendar-check"></i> My Attendance
     </a>
-            <a href="/STUDENT%20INFO/studentsportal/students_announcements.php" class="<?= $current=='students_announcements.php'?'active':'' ?>">
+            <a href="<?php echo BASE_URL; ?>studentsportal/students_announcements.php" class="<?= $current=='students_announcements.php'?'active':'' ?>">
         <i class="fas fa-bullhorn"></i> Announcements
     </a>
-            <a href="/STUDENT%20INFO/studentsportal/students_tasks.php" class="<?= $current=='students_tasks.php'?'active':'' ?>">
-        <i class="fas fa-tasks"></i> My Tasks
-    </a>
-        </div>
+            <a href="<?php echo BASE_URL; ?>studentsportal/students_tasks.php" class="<?= $current=='students_tasks.php'?'active':'' ?>"><i class="fas fa-tasks"></i> My Tasks</a>
+            
+            <a href="<?php echo BASE_URL; ?>studentsportal/assessment.php" class="<?= $current=='assessment.php'?'active':'' ?>"><i class="fas fa-file-invoice-dollar"></i> Assessment</a></div>
     </div>
 
     <!-- Logout Modal -->
@@ -107,7 +108,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
         }
 
         function confirmLogout() {
-            window.location.href = '../Accesspage/student_login.php';
+            window.location.href = '<?php echo BASE_URL; ?>studentsportal/student_logout_process.php';
         }
 
         // Close modal on outside click

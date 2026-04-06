@@ -16,8 +16,9 @@
  */
 
 session_start();
-require_once '../config/database.php';
-require_once '../config/current_school_year.php';
+require_once dirname(__DIR__) . '/config/paths.php';
+require_once PROJECT_ROOT . '/config/database.php';
+require_once PROJECT_ROOT . '/config/current_school_year.php';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -62,7 +63,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 ($student['school_year'] != $active_year || $student['semester'] != $active_sem);
 
             // Redirect to student dashboard
-            header("Location: ../studentsportal/students_dashboard.php");
+ header("Location: " . BASE_URL . "studentsportal/students_dashboard.php");
             exit();
 
         } else {
@@ -81,13 +82,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>Student Portal Login</title>
-    <link rel="stylesheet" href="../css/student.css">
+<link rel="stylesheet" href="<?php echo asset('css/student.css'); ?>">
 </head>
 <body>
 <div class="container">
 
     <div class="left-panel">
-        <a href="../index.php" class="back-arrow">↩</a>
+  <a href="<?php echo BASE_URL; ?>index.php" class="back-arrow">↩</a>
         <div class="icon">👤</div>
         <h2>STUDENT PORTAL</h2>
         <p>Please enter your details</p>
@@ -109,7 +110,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <button type="submit" class="btn">Log In</button>
 
-           <p style="margin-top:10px;">Don't have an account? <a href="register.php">Register Here</a></p>
+           <p style="margin-top:10px;">Don't have an account?  <a href="<?php echo BASE_URL; ?>Accesspage/register.php">Register Here</a></p>
         </form>
     </div>
 

@@ -1,9 +1,10 @@
 <?php
+require_once dirname(__DIR__) . '/config/paths.php';
 $current = basename($_SERVER['PHP_SELF']);
 
 // Default back_url if not set
 if (!isset($back_url)) {
-    $back_url = "../Accesspage/teacher_login.php";
+   $back_url = BASE_URL . "Accesspage/teacher_login.php";
 }
 
 // Check if user is admin
@@ -16,7 +17,7 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard</title>
-    <link rel="stylesheet" href="../css/teacherportal.css">
+    <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -33,62 +34,61 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     <a href="#" class="back-arrow logout-btn" onclick="showLogoutConfirmation(event)">
         <i class="fas fa-sign-out-alt"></i>
     </a>
-       <img src="../images/622685015_925666030131412_6886851389087569993_n.jpg" alt="School Logo" style="width: 80px; display: block; margin: 40px auto 15px auto;border-radius: 5px; animation: float 3s ease-in-out infinite;">
+       <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>" 
+     alt="School Logo" 
+     style="width: 80px; display: block; margin: 40px auto 15px auto; border-radius: 5px;">
     <?php if ($is_admin): ?>
     <h2 style="margin-top: 5px;"><i class="fas fa-user-shield"></i> Admin's Portal</h2>
     <?php else: ?>
     <h2 style="margin-top: 5px;"><i class="fas fa-chalkboard-teacher"></i> Teacher's Portal</h2>
     <?php endif; ?>
-<p class="sidebar-sub"><?php include_once '../config/current_school_year.php'; echo getActiveSchoolYear($conn) ?? 'Academic Year Not Set'; ?> - <?php echo getActiveSemester($conn) ?? ''; ?></p>
 
-    <a href="../teachersportal/dashboard.php" class="<?= $current=='dashboard.php'?'active':'' ?>">
+   <a href="<?= BASE_URL ?>teachersportal/dashboard.php" class="<?= $current=='dashboard.php'?'active':'' ?>">
         <i class="fas fa-th-large"></i> Dashboard
     </a>
 
-    <a href="../teachersportal/students.php" class="<?= $current=='students.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>teachersportal/students.php" class="<?= $current=='students.php'?'active':'' ?>">
         <i class="fas fa-user-graduate"></i> Students
     </a>
 
     <?php if ($is_admin): ?>
-    <a href="teachers_list.php" class="<?= $current=='teachers_list.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>teachersportal/teachers_list.php" class="<?= $current=='teachers_list.php'?'active':'' ?>">
         <i class="fas fa-chalkboard-teacher"></i> Teachers List
     </a>
     <?php endif; ?>
 
-    <a href="../teachersportal/grades.php" class="<?= $current=='grades.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>teachersportal/grades.php" class="<?= $current=='grades.php'?'active':'' ?>">
         <i class="fas fa-chart-line"></i> Grades
     </a>
 
     <?php if(!$is_admin): ?>
-    <a href="../teachersportal/attendance.php" class="<?= $current=='attendance.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>teachersportal/attendance.php" class="<?= $current=='attendance.php'?'active':'' ?>">
         <i class="fas fa-calendar-check"></i> Attendance
     </a>
 
-    <a href="../task/task.php" class="<?= $current=='task.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>teachersportal/tasks.php" class="<?= $current=='tasks.php'?'active':'' ?>">
         <i class="fas fa-tasks"></i> Tasks
     </a>
 <?php endif; ?>
 
-    <a href="../teachersportal/subjects.php" class="<?= $current=='subjects.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>teachersportal/subjects.php" class="<?= $current=='subjects.php'?'active':'' ?>">
         <i class="fas fa-book"></i> Subjects & Classes
     </a>
 
-    <a href="../teachersportal/schedule.php" class="<?= $current=='schedule.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>teachersportal/schedule.php" class="<?= $current=='schedule.php'?'active':'' ?>">
         <i class="fas fa-calendar-alt"></i> Schedules
     </a>
 
-    <a href="../teachersportal/announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>teachersportal/announcements.php" class="<?= $current=='announcements.php'?'active':'' ?>">
         <i class="fas fa-bullhorn"></i> Announcements
     </a>
 
     <?php if ($is_admin): ?>
-    <a href="../admin/manage_school_year.php" class="<?= $current=='manage_school_year.php'?'active':'' ?>">
+    <a href="<?= BASE_URL ?>admin/manage_school_year.php" class="<?= $current=='manage_school_year.php'?'active':'' ?>">
         <i class="fas fa-calendar-alt"></i> Manage School Year
     </a>
     <?php endif; ?>
     </div>
-
-</body>
 
     <!-- Logout Modal -->
     <div id="logoutModal" class="modal">
@@ -116,7 +116,7 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
         }
 
         function confirmLogout() {
-            window.location.href = '../teachersportal/logout.php';
+            window.location.href = '<?= BASE_URL ?>teachersportal/logout.php';
         }
 
         // Close modal on outside click
