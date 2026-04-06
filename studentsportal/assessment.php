@@ -185,6 +185,7 @@ $subjects_json = json_encode($subjects_js, JSON_HEX_TAG | JSON_HEX_APOS | JSON_H
     <title>Assessment Form – <?= htmlspecialchars($student_name) ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= asset('css/studentportal.css') ?>">
+    <link rel="stylesheet" href="<?= asset('css/assessment.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <!-- jsPDF only – no html2canvas needed -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
