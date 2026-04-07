@@ -1,11 +1,12 @@
 # 📚 Student Records Information System (SRIS) 
-🎓 Self study Project
+🎓 BS Information Technology Capstone Project
 
-Bachelor of Science in Information Technology
+**Current Working Directory:** `c:/xampp/htdocs/Student_Info/`
 
-[![PHP](https://img.shields.io/badge/PHP-7.0%2B-8892BF?style=flat&logo=php&logoColor=white)](https://www.php.net/)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1?style=flat&logo=mysql&logoColor=white)](https://www.mysql.com/)
-[![XAMPP](https://img.shields.io/badge/XAMPP-8.0%2B-orange?style=flat&logo=apachefriends&logoColor=white)](https://www.apachefriends.org/)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-8892BF?style=flat&logo=php&logoColor=white)](https://www.php.net/)
+[![MySQL](https://img.shields.io/badge/MySQL-10.4%2B-4479A1?style=flat&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![XAMPP](https://img.shields.io/badge/XAMPP-8.2%2B-orange?style=flat&logo=apachefriends&logoColor=white)](https://www.apachefriends.org/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6%2B-yellow?style=flat&logo=javascript&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
 ## 📖 Table of Contents
 - [Project Overview](#-project-overview)
@@ -40,55 +41,26 @@ To develop a web-based system that improves the efficiency, accuracy, and access
 
 ## 🚀 Key Features
 
-<details>
-<summary>👨‍🎓 Student Management System</summary>
+| Feature | Students | Teachers | Admin |
+|---------|----------|----------|-------|
+| **Dashboard** | ✅ View grades, tasks, schedule | ✅ View students, tasks, announcements | ✅ Full system access |
+| **Authentication** | ✅ Login/Register | ✅ Login/Register | ✅ Seeded admin |
+| **Profile Management** | ✅ View/Edit profile & pic | ✅ View assigned classes | - |
+| **Grades** | ✅ View grades | ✅ Manage grades | - |
+| **Attendance** | ✅ View attendance | ✅ Mark attendance | - |
+| **Class Schedule** | ✅ View schedule | ✅ View/manage subjects | - |
+| **Tasks** | ✅ Submit tasks/files/notes | ✅ Create/view submissions/unread | ✅ |
+| **Announcements** | ✅ View | ✅ Create/Post | ✅ |
+| **Subjects & Students** | - | ✅ Filter by year/section | - |
+| **School Year Mgmt** | Auto-detect active | Filtered views | ✅ Manage active year |
+| **Evaluations** | ✅ Evaluate teachers | ✅ View evaluations | - |
+| **Real-time** | ✅ SSE updates | ✅ SSE tasks | - |
 
-- Add, update, delete, and view student records
-- Store personal details and academic information
-
-</details>
-
-<details>
-<summary>👩‍🏫 Teacher Management</summary>
-
-- Manage teacher profiles
-- Assign teachers to specific classes and sections
-
-</details>
-
-<details>
-<summary>🗂️ Section & Schedule Management</summary>
-
-- Organize students into sections
-- Generate and manage class schedules
-
-</details>
-
-<details>
-<summary>🔐 Role-Based Access Control</summary>
-
-- **Administrator** – Full access to system features
-- **Teachers** – Manage assigned students and schedules
-- **Students** – View personal records and schedules
-
-</details>
-
-<details>
-<summary>🔍 Search and Filtering System</summary>
-
-- Dynamic search functionality
-- Efficient filtering of records
-
-</details>
-
-<details>
-<summary>🔑 Secure Authentication System</summary>
-
-- Login/logout functionality
-- Session-based user authentication
-- Protected system access
-
-</details>
+**Advanced:**
+- File uploads (tasks/profiles) with secure paths
+- Prepared statements & password hashing
+- Active school year/semester filtering
+- Dynamic teacher year-level/section assignment
 
 ## 🏗️ System Architecture
 
@@ -106,28 +78,49 @@ HTML/CSS/JS ──────────► Business Logic ───► Databa
 
 ## 🛠️ Technologies Used
 
-| Category       | Technology             |
-|----------------|------------------------|
-| Frontend       | HTML, CSS, JavaScript |
-| Backend        | PHP                    |
-| Database       | MySQL                  |
-| Development Tool | Visual Studio Code   |
-| Server         | XAMPP (Apache & MySQL)|
+| Category | Technology | Details |
+|----------|------------|---------|
+| **Backend** | PHP 8.2+ | MVC-like, mysqli prepared stmts |
+| **Frontend** | HTML5/CSS3/JS ES6+ | Responsive, SSE real-time |
+| **Database** | MySQL 10.4+ (MariaDB) | UTF8mb4, foreign keys |
+| **Server** | XAMPP Apache | Local dev server |
+| **Security** | PHP `password_hash/verify` | Session mgmt, SQL injection prevention |
+| **Storage** | File system | Profile pics/task uploads |
+| **Tools** | VSCode, phpMyAdmin | Development & DB mgmt
 
 ## ⚡ Quick Start
 
-1. **Install XAMPP** (Apache + MySQL): Download from [apachefriends.org](https://www.apachefriends.org/).
-2. **Start Servers**: Open XAMPP Control Panel, start Apache & MySQL.
-3. **Deploy Project**:
-   - Copy project to `c:/xampp/htdocs/Student Info/`
-4. **Import Database**:
-   - Open phpMyAdmin (`http://localhost/phpmyadmin`)
-   - Import `studentinfo.sql`
-5. **Access**:
-   - Main: `http://localhost/Student%20Info/`
-   - Student Login: `Accesspage/student_login.php`
-   - Teacher Login: `Accesspage/teacher_login.php`
-6. **Test**: Use seed scripts like `admin/seed_admin_teacher.php`.
+### Prerequisites
+- [XAMPP 8.2+](https://www.apachefriends.org/) (Apache + MySQL/MariaDB)
+
+### Setup (5 mins)
+```
+1. Start XAMPP → Apache & MySQL
+2. Open phpMyAdmin: http://localhost/phpmyadmin
+3. Create DB `studentinfo` → Import `studentinfo.sql`
+4. Access: http://localhost/Student_Info/
+```
+
+### Sample Login Credentials (from DB)
+**Students:**
+| ID | Name | Password (default) |
+|----|------|--------------------|
+| 26-1111 | Maccoy Tabios | `maccoy123` |
+| 26-2222 | Juliana Pariscova | `juliana123` |
+| 26-4444 | Pedro Penduko | `pedro123` |
+
+**Teachers:**
+| ID | Name | Course | Password |
+|----|------|--------|----------|
+| 321 | Maccoy Malittay | BSIT | `maccoy321` |
+| 123 | Mark Tabios | BSIT | `mark123` |
+
+**Admin:** Run `http://localhost/Student_Info/admin/seed_admin_teacher.php`
+
+### URLs
+- **Student Login:** `Accesspage/student_login.php`
+- **Teacher Login:** `Accesspage/teacher_login.php`
+- **Dashboard:** Auto-redirect after login
 
 ## 📸 Main Interface View
 
@@ -140,20 +133,35 @@ HTML/CSS/JS ──────────► Business Logic ───► Databa
 ## 📁 Project Structure
 
 ```
-Student Info/
-├── index.php              # Landing page
-├── README.md              # This file
-├── studentinfo.sql        # Database schema
-├── Accesspage/            # Login/Register
-├── admin/                 # Admin panels
-├── config/                # Config files (DB, paths)
-├── css/                   # Styles
-├── js/                    # Scripts
-├── studentsportal/        # Student features (grades, schedule, tasks)
-├── teachersportal/        # Teacher features
-├── task/                  # Task submission system
-└── ...                    # Images, uploads
+Student_Info/                    # Root (htdocs/Student_Info)
+├── index.php                   # Landing
+├── README.md                   # This doc
+├── studentinfo.sql             # Full DB schema + sample data
+├── .htaccess                   # Security
+├── config/
+│   ├── database.php            # DB connection
+│   ├── paths.php              # BASE_URL, PROJECT_ROOT
+│   ├── current_school_year.php # Active year/semester
+│   └── teacher_filter.php      # Teacher views
+├── Accesspage/                 # Auth
+│   └── *.php (login/register)
+├── studentsportal/             # Student portal
+│   ├── students_*.php         # Dashboard, grades, tasks, etc.
+│   └── components/            # Sidebar, warnings
+├── teachersportal/             # Teacher portal
+│   └── *.php                  # Students, subjects, grades, tasks
+├── tasks/                      # Task system
+│   ├── *.php (CRUD APIs)      # Submit/get/mark read
+│   ├── uploads/               # Teacher files
+│   └── student_uploads/       # Student submissions
+├── admin/                      # Admin tools
+│   └── manage_school_year.php # Active year mgmt
+├── css/                        # Styles (student.css etc.)
+├── images/ & profile_pics/    # Assets/uploads
+└── ...                        # Fee structure, logs
 ```
+
+**Key Config:** Edit `config/database.php` for prod DB creds.
 
 ## 🤝 Contributing
 

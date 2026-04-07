@@ -44,7 +44,28 @@ if (!$course_result || mysqli_num_rows($course_result) == 0) {
 $course_row = mysqli_fetch_assoc($course_result);
 $course_id  = $course_row['id'];
 
-// Updated query to get UNREAD submission count (teacher_read = 0)
+// Summary stats
+$stats_sql = "SELECT
+    COUNT(DISTINCT t.id) AS total_tasks,
+    COUNT(DISTINCT s.id) AS total_subjects,
+    COUNT(DISTINCT ts.id) AS total_submissions,
+    SUM(CASE WHEN ts.teacher_read = 0 THEN 1 ELSE 0 END) AS unread_submissions
+FROM subjects s
+LEFT JOIN tasks t ON t.subject_id = s.id AND t.teacher_id = '$teacher_id'
+LEFT JOIN task_submissions ts ON ts.task_id = t.id
+WHERE s.course_id = '$course_id'
+$subject_year_filter
+$subject_section_filter";
+
+$stats_result = mysqli_query($conn, $stats_sql);
+$stats = $stats_result ? mysqli_fetch_assoc($stats_result) : [];
+
+$total_tasks        = $stats['total_tasks'] ?? 0;
+$total_subjects     = $stats['total_subjects'] ?? 0;
+$total_submissions  = $stats['total_submissions'] ?? 0;
+$unread_submissions = $stats['unread_submissions'] ?? 0;
+
+// Subjects with unread count
 $subjects_query = mysqli_query(
     $conn,
     "SELECT s.*, (
@@ -75,7 +96,72 @@ $subjects_query = mysqli_query(
 
 <div class="content">
     <h1><i class="fas fa-tasks"></i> Tasks Management - <?= htmlspecialchars($selected_course) ?></h1>
-    <div class="intro-section"><p><strong>Quick Start:</strong> Create Activities, Homework, or Lab tasks.<p><ul class="feature-list"> <li><i class="fas fa-bell"></i> Bell: View unread student submissions</li> <li><i class="fas fa-edit"></i> Edit/Delete tasks (removes submissions)</li><li><i class="fas fa-search"></i> Search title/desc/subject/type</li><li><i class="fas fa-eye"></i> Mark submissions read to clear bell</li></ul></div>
+
+    <div class="intro-section">
+        <!-- Summary Metric Cards -->
+        <div class="summary-grid">
+            <div class="metric-card">
+                <div class="metric-icon-wrap icon-tasks-total">
+                    <i class="fas fa-list-check"></i>
+                </div>
+                <div class="metric-body">
+                    <div class="metric-label">Created tasks</div>
+                    <div class="metric-value"><?= $total_tasks ?></div>
+                    <div class="metric-sub">across all subjects</div>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon-wrap icon-submissions">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <div class="metric-body">
+                    <div class="metric-label">Total submissions</div>
+                    <div class="metric-value"><?= $total_submissions ?></div>
+                    <div class="metric-sub">from students</div>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon-wrap icon-unread">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="metric-body">
+                    <div class="metric-label">Unread submissions</div>
+                    <div class="metric-value metric-warning"><?= $unread_submissions ?></div>
+                    <div class="metric-sub">waiting for review</div>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon-wrap icon-subjects">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="metric-body">
+                    <div class="metric-label">Subjects with tasks</div>
+                    <div class="metric-value"><?= $total_subjects ?></div>
+                    <div class="metric-sub">active this term</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guide Cards -->
+        <div class="guide-grid">
+            <div class="guide-card">
+                <div class="guide-icon icon-bell"><i class="fas fa-bell"></i></div>
+                <div class="guide-text"><strong>Bell</strong> — view unread student submissions per subject</div>
+            </div>
+            <div class="guide-card">
+                <div class="guide-icon icon-edit"><i class="fas fa-pencil-alt"></i></div>
+                <div class="guide-text"><strong>Edit / Delete</strong> — modify tasks; deleting removes all submissions</div>
+            </div>
+            <div class="guide-card">
+                <div class="guide-icon icon-search"><i class="fas fa-search"></i></div>
+                <div class="guide-text"><strong>Search</strong> — filter by title, description, subject, or type</div>
+            </div>
+            <div class="guide-card">
+                <div class="guide-icon icon-eye"><i class="fas fa-eye"></i></div>
+                <div class="guide-text"><strong>Mark as read</strong> — clears the bell badge after reviewing</div>
+            </div>
+        </div>
+    </div>
 
     <div class="section-box">
         <div class="top-bar">
@@ -283,7 +369,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalTitle = document.getElementById('modalTitle');
     const modalBody  = document.getElementById('modalBody');
 
-    // Bell icon click handler
     document.querySelectorAll('.notification-icon').forEach(bell => {
         bell.addEventListener('click', function(e) {
             e.preventDefault();
@@ -291,8 +376,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const subjectId = this.getAttribute('data-subject-id');
             const subjectName = this.getAttribute('data-subject-name');
-            
-            console.log('Clicked bell for subject ID:', subjectId, 'Name:', subjectName);
             
             if (!subjectId || subjectId === '') {
                 showNotification('Invalid subject ID', 'error');
@@ -306,14 +389,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Close modal handlers with refresh
     if (closeBtn) {
         closeBtn.onclick = () => {
             modal.classList.remove('show');
             modalBody.innerHTML = '';
-            if (currentSubjectId) {
-                refreshBellCount(currentSubjectId);
-            }
+            if (currentSubjectId) refreshBellCount(currentSubjectId);
         };
     }
     
@@ -321,9 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target === modal) {
             modal.classList.remove('show');
             modalBody.innerHTML = '';
-            if (currentSubjectId) {
-                refreshBellCount(currentSubjectId);
-            }
+            if (currentSubjectId) refreshBellCount(currentSubjectId);
         }
     };
     
@@ -331,16 +409,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape') {
             modal.classList.remove('show');
             modalBody.innerHTML = '';
-            if (currentSubjectId) {
-                refreshBellCount(currentSubjectId);
-            }
+            if (currentSubjectId) refreshBellCount(currentSubjectId);
         }
     });
 });
 
-// Load submissions function
-// Load submissions function
-// Load submissions function
 async function loadSubmissions(subjectId) {
     try {
         modalBody.innerHTML = '<div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin" style="font-size:2em;color:#6b7280"></i><p>Loading submissions...</p></div>';
@@ -348,8 +421,6 @@ async function loadSubmissions(subjectId) {
         const url = `${BASE_URL}tasks/get_subject_submissions.php?subject_id=${subjectId}`;
         const res = await fetch(url);
         const data = await res.json();
-        
-        console.log('API Response:', data);
         
         if (data.success && data.submissions && data.submissions.length > 0) {
             let html = '';
@@ -365,20 +436,15 @@ async function loadSubmissions(subjectId) {
                 `;
                 
                 student.submissions.forEach(sub => {
-                    console.log('Creating button for - Task ID:', sub.task_id, 'Student ID:', studentId);
                     const fileLink = sub.file_path && sub.file_path !== 'undefined' && sub.file_path !== 'null' && sub.file_path !== ''
                         ? `<a href="${BASE_URL}tasks/student_uploads/${sub.file_path}" class="file-link" target="_blank"><i class="fas fa-file-download"></i> ${escapeHtml(sub.original_filename)}</a>`
                         : '<span style="color:#6b7280"><i class="fas fa-ban"></i> No file attached</span>';
                     
-                    // Create button with inline onclick for guaranteed parameter passing
-                   const readBadge = sub.teacher_read
-    ? '<span class="read-badge read-yes"><i class="fas fa-check-circle"></i> Read</span>'
-    : (() => {
-        console.log('Creating button - task_id:', sub.task_id, 'studentId:', studentId);
-        return `<button class="read-badge read-no" onclick="markSubmissionAsReadDirect(${sub.task_id}, ${studentId}, this)" style="border:none; cursor:pointer;"><i class="fas fa-eye"></i> Mark as Read</button>`;
-    })();
+                    const readBadge = sub.teacher_read
+                        ? '<span class="read-badge read-yes"><i class="fas fa-check-circle"></i> Read</span>'
+                        : `<button class="read-badge read-no" onclick="markSubmissionAsReadDirect(${sub.task_id}, ${studentId}, this)" style="border:none; cursor:pointer;"><i class="fas fa-eye"></i> Mark as Read</button>`;
                     
-                    const typeIcon = sub.task_type === 'Activities' ? 'fa-tasks' : (sub.task_type === 'Homework' ? 'fa-book' : 'fa-flask');
+                    const typeIcon  = sub.task_type === 'Activities' ? 'fa-tasks' : (sub.task_type === 'Homework' ? 'fa-book' : 'fa-flask');
                     const typeColor = sub.task_type === 'Activities' ? '#3b82f6' : (sub.task_type === 'Homework' ? '#f59e0b' : '#10b981');
                     
                     const notesHtml = sub.notes && sub.notes.trim() !== '' && sub.notes !== 'undefined' && sub.notes !== 'null'
@@ -422,51 +488,29 @@ async function loadSubmissions(subjectId) {
     }
 }
 
-// Direct function to mark submission as read
-// Direct function to mark submission as read
 function markSubmissionAsReadDirect(taskId, studentId, element) {
-    console.log('Direct call - Task ID:', taskId, 'Student ID:', studentId);
-    
-    // Validate parameters
     if (!taskId || !studentId || taskId <= 0 || studentId <= 0) {
-        console.error('Invalid parameters:', {taskId, studentId});
         showNotification('Invalid task or student ID: ' + taskId + ', ' + studentId, 'error');
         return;
     }
     
-    // Disable button to prevent double click
     element.disabled = true;
     var originalText = element.innerHTML;
     element.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
     
-    // Use fetch with GET method (simpler and works)
     fetch(BASE_URL + 'tasks/mark_submission_read.php?task_id=' + taskId + '&student_id=' + studentId)
-    .then(function(response) {
-        return response.json();
-    })
+    .then(function(response) { return response.json(); })
     .then(function(data) {
-        console.log('Mark as read response:', data);
-        
         if (data.success) {
-            // Update the button to show it's read
             element.innerHTML = '<i class="fas fa-check-circle"></i> Read';
             element.classList.remove('read-no');
             element.classList.add('read-yes');
             element.disabled = false;
             element.onclick = null;
-            
             showNotification('Submission marked as read', 'success');
-            
-            // Update the bell count for this subject
-            if (currentSubjectId) {
-                refreshBellCount(currentSubjectId);
-            }
-            
-            // Reload the modal after a short delay
+            if (currentSubjectId) refreshBellCount(currentSubjectId);
             setTimeout(function() {
-                if (currentSubjectId) {
-                    loadSubmissions(currentSubjectId);
-                }
+                if (currentSubjectId) loadSubmissions(currentSubjectId);
             }, 1000);
         } else {
             element.disabled = false;
@@ -475,20 +519,16 @@ function markSubmissionAsReadDirect(taskId, studentId, element) {
         }
     })
     .catch(function(error) {
-        console.error('Error marking as read:', error);
         element.disabled = false;
         element.innerHTML = originalText;
         showNotification('Error marking submission as read: ' + error, 'error');
     });
 }
 
-// Refresh bell count from server
 async function refreshBellCount(subjectId) {
     try {
         const response = await fetch(`${BASE_URL}tasks/get_unread_count.php?subject_id=${subjectId}`);
         const data = await response.json();
-        
-        console.log('Refresh bell count response:', data);
         
         if (data.success) {
             const bellIcon = document.querySelector(`.notification-icon[data-subject-id="${subjectId}"]`);
@@ -512,13 +552,14 @@ async function refreshBellCount(subjectId) {
         console.error('Error refreshing count:', error);
     }
 }
-// Show notification toast
+
 function showNotification(message, type = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast-notification toast-${type}`;
-    toast.innerHTML = type === 'error' ? `<i class="fas fa-exclamation-circle"></i> ${message}` : `<i class="fas fa-check-circle"></i> ${message}`;
+    toast.innerHTML = type === 'error'
+        ? `<i class="fas fa-exclamation-circle"></i> ${message}`
+        : `<i class="fas fa-check-circle"></i> ${message}`;
     document.body.appendChild(toast);
-    
     setTimeout(() => toast.style.transform = 'translateX(0)', 100);
     setTimeout(() => {
         toast.style.transform = 'translateX(400px)';
@@ -526,7 +567,6 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Escape HTML helper
 function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/[&<>]/g, function(m) {
@@ -537,12 +577,12 @@ function escapeHtml(str) {
     });
 }
 
-// Delete task confirmation
+// Delete task modal
 let deleteTaskUrl = null;
-const deleteModal = document.getElementById('deleteTaskModal');
+const deleteModal    = document.getElementById('deleteTaskModal');
 const confirmDeleteBtn = document.getElementById('confirmDeleteTask');
-const cancelDeleteBtn = document.getElementById('cancelDeleteTask');
-const closeDeleteBtn = deleteModal ? deleteModal.querySelector('.close-modal') : null;
+const cancelDeleteBtn  = document.getElementById('cancelDeleteTask');
+const closeDeleteBtn   = deleteModal ? deleteModal.querySelector('.close-modal') : null;
 
 document.addEventListener('click', function(e) {
     const deleteButton = e.target.closest('.action-btn.delete');
@@ -550,34 +590,26 @@ document.addEventListener('click', function(e) {
         e.preventDefault();
         const link = deleteButton.closest('a');
         deleteTaskUrl = link ? link.href : null;
-        if (deleteModal) {
-            deleteModal.classList.add('show');
-        }
+        if (deleteModal) deleteModal.classList.add('show');
     }
 });
 
 if (confirmDeleteBtn) {
     confirmDeleteBtn.addEventListener('click', function() {
-        if (deleteTaskUrl) {
-            window.location.href = deleteTaskUrl;
-        }
+        if (deleteTaskUrl) window.location.href = deleteTaskUrl;
     });
 }
 
 if (cancelDeleteBtn) {
     cancelDeleteBtn.addEventListener('click', function() {
-        if (deleteModal) {
-            deleteModal.classList.remove('show');
-        }
+        if (deleteModal) deleteModal.classList.remove('show');
         deleteTaskUrl = null;
     });
 }
 
 if (closeDeleteBtn) {
     closeDeleteBtn.addEventListener('click', function() {
-        if (deleteModal) {
-            deleteModal.classList.remove('show');
-        }
+        if (deleteModal) deleteModal.classList.remove('show');
         deleteTaskUrl = null;
     });
 }

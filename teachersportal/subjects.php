@@ -193,6 +193,12 @@ if ($year_level) {
     $subj_params[] = $year_level;
     $subj_types  .= "s";
 }
+$section_filter = $_GET['section_filter'] ?? '';
+if ($section_filter) {
+    $subj_sql    .= " AND s.section=?";
+    $subj_params[] = $section_filter;
+    $subj_types  .= "s";
+}
 
 $subj_sql .= " ORDER BY s.year_level ASC, s.subject_name ASC";
 
@@ -263,8 +269,8 @@ $teacher_dropdown_years = getTeacherDropdownYears();
     <h1>Subjects & Classes - <?= htmlspecialchars($selected_course) ?></h1>
     <p>Manage subjects, classes, and assignments</p>
 
-    <form method="GET" style="margin-bottom:15px;">
-        <label>Select Year Level:</label>
+<form method="GET" style="margin-bottom:15px;">
+        <?php $section_filter = $_GET['section_filter'] ?? ''; ?>
         <select name="year_level" onchange="this.form.submit()">
             <?php if ($is_admin): ?>
                 <option value="">All Years</option>
@@ -275,6 +281,22 @@ $teacher_dropdown_years = getTeacherDropdownYears();
                 </option>
             <?php endforeach; ?>
         </select>
+<select name="section_filter" onchange="this.form.submit()">
+            <?php if ($is_admin): ?>
+                <option value="">All Sections</option>
+            <?php endif; ?>
+            <?php 
+            $dropdown_sections = $is_admin ? ['A','B','C','D','E'] : getTeacherDropdownSections();
+            foreach($dropdown_sections as $sec): 
+            ?>
+                <option value="<?= htmlspecialchars($sec) ?>" <?= ($section_filter == $sec)?'selected':'' ?>>
+                    <?= htmlspecialchars($sec) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <?php if ($section_filter || $year_level): ?>
+            <a href="?<?= http_build_query(array_filter($_GET, fn($v) => $v !== '', true)) ?>" style="margin-left:10px;"></a>
+        <?php endif; ?>
     </form>
 
     <!-- SUBJECT MANAGEMENT -->
@@ -291,10 +313,11 @@ $teacher_dropdown_years = getTeacherDropdownYears();
         <div class="table-container">
             <table>
                 <thead>
-                    <tr>
+<tr>
                         <th>Code</th>
                         <th>Subject Name</th>
                         <th>Year Level</th>
+                        <th>Section</th>
                         <th>Type</th>
                         <th>Description</th>
                         <th>Actions</th>
@@ -303,10 +326,11 @@ $teacher_dropdown_years = getTeacherDropdownYears();
                 <tbody>
                 <?php if ($subjects_query && $subjects_query->num_rows > 0): ?>
                     <?php while ($subject = $subjects_query->fetch_assoc()): ?>
-                        <tr>
+<tr>
                             <td><?= htmlspecialchars($subject['code']) ?></td>
                             <td><?= htmlspecialchars($subject['subject_name']) ?></td>
                             <td><?= htmlspecialchars($subject['year_level']) ?></td>
+                            <td><?= htmlspecialchars($subject['section']) ?></td>
                             <td>
                                 <span class="badge <?= $subject['subject_type'] == 'MINOR' ? 'badge-minor' : 'badge-major' ?>">
                                     <?= strtoupper($subject['subject_type']) ?>
