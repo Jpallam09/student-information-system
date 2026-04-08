@@ -73,10 +73,13 @@ header("Location: " . BASE_URL . "teachersportal/dashboard.php");
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
     <meta charset="UTF-8">
     <title>Teacher Login</title>
      <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 <link rel="stylesheet" href="<?php echo asset('css/student.css'); ?>">
+
 </head>
 <body>
 
@@ -101,7 +104,7 @@ header("Location: " . BASE_URL . "teachersportal/dashboard.php");
             <div class="input-group password-group">
                 <label>Password</label>
                 <input type="password" name="password" id="password" required>
-                <span class="toggle-password" id="togglePassword">👁</span>
+<span class="toggle-password" id="togglePassword"><i class="fas fa-eye" id="toggleIcon"></i></span>
             </div>
             <button type="submit" class="btn">Log In</button>
         </form>
@@ -116,18 +119,26 @@ header("Location: " . BASE_URL . "teachersportal/dashboard.php");
 </div>
 
 <script>
-const toggle = document.getElementById("togglePassword");
-const password = document.getElementById("password");
 
-toggle.addEventListener("click", function () {
-    if (password.type === "password") {
-        password.type = "text";
-        toggle.textContent = "🙈"; 
+// Toggle password visibility with icon change
+function togglePassword(fieldId, iconId) {
+    const field = document.getElementById(fieldId);
+    const icon = document.getElementById(iconId);
+    if (field.type === "password") {
+        field.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
     } else {
-        password.type = "password";
-        toggle.textContent = "👁";
+        field.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
     }
+}
+
+document.getElementById("togglePassword").addEventListener("click", function () {
+    togglePassword("password", "toggleIcon");
 });
+
 </script>
 
 </body>
