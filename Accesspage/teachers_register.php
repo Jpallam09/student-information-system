@@ -137,10 +137,17 @@ header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
             <!-- Basic Personal Information -->
             <fieldset>
                 <legend>📝 Basic Personal Information</legend>
-                <input type="text" name="teacher_id" placeholder="Teacher ID" required>
-                <input type="text" name="first_name" placeholder="First Name" required>
-                <input type="text" name="middle_name" placeholder="Middle Name">
-                <input type="text" name="last_name" placeholder="Last Name" required>
+                <input type="text" name="teacher_id" placeholder="Teacher ID (e.g., 25-0001)" pattern="[0-9]{2}-[0-9]{4}" title="Format: 2 digits, dash, 4 digits (e.g., 25-0001)" maxlength="7" required>
+                <input type="text" name="first_name" placeholder="First Name (e.g., Juan)" 
+                required
+                oninput="this.value = this.value.toUpperCase()">
+                <input type="text" name="middle_name" placeholder="Middle Name (e.g., Malittay)"
+                oninput="this.value = this.value.toUpperCase()">
+
+                <input type="text" name="last_name" placeholder="Last Name (e.g., Danilla)" 
+                required
+                oninput="this.value = this.value.toUpperCase()">
+
                 <input type="text" name="suffix" placeholder="Suffix">
                 <label for="dob">Date of Birth</label>
                 <input type="date" name="dob" required onchange="calculateAge(this)">

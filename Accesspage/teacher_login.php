@@ -95,7 +95,7 @@ header("Location: " . BASE_URL . "teachersportal/dashboard.php");
 
             <div class="input-group">
                 <label>Teacher ID</label>
-                <input type="text" name="teacher_id" required>
+                <input type="text" name="teacher_id" placeholder="Teacher ID (e.g., 25-0001)" pattern="[0-9]{2}-[0-9]{4}" title="Format: 2 digits, dash, 4 digits (e.g., 25-0001)" maxlength="7" required>
             </div>
 
             <div class="input-group password-group">

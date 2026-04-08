@@ -2,7 +2,7 @@
 require_once dirname(__DIR__) . '/config/paths.php';
 require_once PROJECT_ROOT . '/config/database.php';
 
-$teacher_id = "Registrar";
+$teacher_id = "00-0000";
 $first_name = "System";
 $middle_name = ""; // optional
 $last_name = "Administrator";

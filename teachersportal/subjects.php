@@ -175,8 +175,9 @@ $course_row = $cid_result->fetch_assoc();
 $course_id  = $course_row['id'];
 $stmt_cid->close();
 
-// ================== YEAR FILTER ==================
-$year_level = $_GET['year_level'] ?? '';
+// ================== GET PARAMS ==================
+$year_level     = $_GET['year_level']     ?? '';
+$section_filter = $_GET['section_filter'] ?? '';
 
 // ================== FETCH SUBJECTS (PREPARED) ==================
 $subj_sql    = "SELECT * FROM subjects s WHERE s.course_id=? $subject_year_filter $subject_section_filter";
@@ -193,7 +194,6 @@ if ($year_level) {
     $subj_params[] = $year_level;
     $subj_types  .= "s";
 }
-$section_filter = $_GET['section_filter'] ?? '';
 if ($section_filter) {
     $subj_sql    .= " AND s.section=?";
     $subj_params[] = $section_filter;
@@ -209,16 +209,16 @@ $subjects_query = $stmt_subj->get_result();
 $stmt_subj->close();
 
 // ================== FETCH CLASSES (PREPARED) ==================
+// Build the WHERE clause first, then append GROUP BY / ORDER BY after
+// so GET-based filters (year_level, section_filter) can be safely injected.
 $class_sql    = "SELECT c.id, c.section, c.year_level,
                         COUNT(s.id) AS student_count
                  FROM classes c
                  LEFT JOIN students s
-                   ON s.section=c.section
-                  AND s.year_level=c.year_level
-                  AND s.course=?
-                 WHERE c.course_id=? $class_year_filter $class_section_filter
-                 GROUP BY c.id, c.section, c.year_level
-                 ORDER BY c.year_level ASC, c.section ASC";
+                   ON s.section    = c.section
+                  AND s.year_level = c.year_level
+                  AND s.course     = ?
+                 WHERE c.course_id = ? $class_year_filter $class_section_filter";
 
 $class_params = [$selected_course, $course_id];
 $class_types  = "si";
@@ -227,6 +227,22 @@ if (!$is_admin) {
     if (!empty($cy_params)) { $class_params = array_merge($class_params, $cy_params); $class_types .= $cy_types; }
     if (!empty($cs_params)) { $class_params = array_merge($class_params, $cs_params); $class_types .= $cs_types; }
 }
+
+// ── FIX: apply GET dropdown filters for admin (and non-admin) ──────────────
+if ($year_level) {
+    $class_sql    .= " AND c.year_level = ?";
+    $class_params[] = $year_level;
+    $class_types  .= "s";
+}
+if ($section_filter) {
+    $class_sql    .= " AND c.section = ?";
+    $class_params[] = $section_filter;
+    $class_types  .= "s";
+}
+// ───────────────────────────────────────────────────────────────────────────
+
+$class_sql .= " GROUP BY c.id, c.section, c.year_level
+                ORDER BY c.year_level ASC, c.section ASC";
 
 $stmt_class = $conn->prepare($class_sql);
 $stmt_class->bind_param($class_types, ...$class_params);
@@ -242,7 +258,7 @@ $teacher_dropdown_years = getTeacherDropdownYears();
 <head>
     <meta charset="UTF-8">
     <title>Subjects & Classes - <?= htmlspecialchars($selected_course) ?></title>
-     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
+    <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
     <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
@@ -270,8 +286,7 @@ $teacher_dropdown_years = getTeacherDropdownYears();
     <h1>Subjects & Classes - <?= htmlspecialchars($selected_course) ?></h1>
     <p>Manage subjects, classes, and assignments</p>
 
-<form method="GET" style="margin-bottom:15px;">
-        <?php $section_filter = $_GET['section_filter'] ?? ''; ?>
+    <form method="GET" style="margin-bottom:15px;">
         <select name="year_level" onchange="this.form.submit()">
             <?php if ($is_admin): ?>
                 <option value="">All Years</option>
@@ -282,19 +297,21 @@ $teacher_dropdown_years = getTeacherDropdownYears();
                 </option>
             <?php endforeach; ?>
         </select>
-<select name="section_filter" onchange="this.form.submit()">
+
+        <select name="section_filter" onchange="this.form.submit()">
             <?php if ($is_admin): ?>
                 <option value="">All Sections</option>
             <?php endif; ?>
-            <?php 
+            <?php
             $dropdown_sections = $is_admin ? ['A','B','C','D','E'] : getTeacherDropdownSections();
-            foreach($dropdown_sections as $sec): 
+            foreach ($dropdown_sections as $sec):
             ?>
-                <option value="<?= htmlspecialchars($sec) ?>" <?= ($section_filter == $sec)?'selected':'' ?>>
+                <option value="<?= htmlspecialchars($sec) ?>" <?= ($section_filter == $sec) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($sec) ?>
                 </option>
             <?php endforeach; ?>
         </select>
+
         <?php if ($section_filter || $year_level): ?>
             <a href="?<?= http_build_query(array_filter($_GET, fn($v) => $v !== '', true)) ?>" style="margin-left:10px;"></a>
         <?php endif; ?>
@@ -314,7 +331,7 @@ $teacher_dropdown_years = getTeacherDropdownYears();
         <div class="table-container">
             <table>
                 <thead>
-<tr>
+                    <tr>
                         <th>Code</th>
                         <th>Subject Name</th>
                         <th>Year Level</th>
@@ -327,7 +344,7 @@ $teacher_dropdown_years = getTeacherDropdownYears();
                 <tbody>
                 <?php if ($subjects_query && $subjects_query->num_rows > 0): ?>
                     <?php while ($subject = $subjects_query->fetch_assoc()): ?>
-<tr>
+                        <tr>
                             <td><?= htmlspecialchars($subject['code']) ?></td>
                             <td><?= htmlspecialchars($subject['subject_name']) ?></td>
                             <td><?= htmlspecialchars($subject['year_level']) ?></td>
@@ -349,7 +366,7 @@ $teacher_dropdown_years = getTeacherDropdownYears();
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
-                    <tr><td colspan="6">No subjects found.</td></tr>
+                    <tr><td colspan="7">No subjects found.</td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
