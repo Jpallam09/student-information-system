@@ -76,6 +76,7 @@ $attendanceRate = ($totalDays > 0)
 <html>
 <head>
     <title>My Attendance</title>
+     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
     <link rel="stylesheet" href="<?php echo asset('css/studentportal.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>

@@ -182,6 +182,7 @@ $year_colors = ['1st Year'=>'#3b82f6','2nd Year'=>'#10b981','3rd Year'=>'#f59e0b
 <head>
     <meta charset="UTF-8">
     <title><?= htmlspecialchars($selected_course) ?> Schedule</title>
+     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
    <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>

@@ -91,6 +91,7 @@ while ($row = $result->fetch_assoc()) {
 <head>
     <meta charset="UTF-8">
     <title>Subjects & Teachers</title>
+     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
 <link rel="stylesheet" href="<?= asset('css/studentportal.css') ?>">
 <style>
 .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: white; }

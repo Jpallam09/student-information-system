@@ -82,6 +82,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <title>Student Portal Login</title>
+    <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
 <link rel="stylesheet" href="<?php echo asset('css/student.css'); ?>">
 </head>
 <body>

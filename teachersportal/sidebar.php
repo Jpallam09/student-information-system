@@ -17,6 +17,7 @@ $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard</title>
+     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
     <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>

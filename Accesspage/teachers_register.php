@@ -114,6 +114,7 @@ header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
 <head>
     <meta charset="UTF-8">
     <title>Teacher Registration</title>
+     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
 <link rel="stylesheet" href="<?php echo asset('css/register.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 </head>

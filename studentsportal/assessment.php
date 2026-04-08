@@ -183,6 +183,7 @@ $subjects_json = json_encode($subjects_js, JSON_HEX_TAG | JSON_HEX_APOS | JSON_H
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Assessment Form – <?= htmlspecialchars($student_name) ?></title>
+    <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= asset('css/studentportal.css') ?>">
     <link rel="stylesheet" href="<?= asset('css/assessment.css') ?>">

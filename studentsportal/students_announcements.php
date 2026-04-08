@@ -12,7 +12,7 @@ if (!isset($_SESSION['student_id'])) {
 
 $student_id = $_SESSION['student_id'];
 
-/* ================= STUDENT INFO (SAFE) ================= */
+/* ================= STUDENT INFO ================= */
 $stmt = $conn->prepare("SELECT course, year_level, section FROM students WHERE id = ?");
 $stmt->bind_param("i", $student_id);
 $stmt->execute();
@@ -23,8 +23,8 @@ if (!$studentData) {
     die("Student not found.");
 }
 
-$student_course = strtoupper(trim($studentData['course']));
-$student_year = $studentData['year_level'];
+$student_course  = strtoupper(trim($studentData['course']));
+$student_year    = $studentData['year_level'];
 $student_section = $studentData['section'];
 
 if (empty($student_course)) {
@@ -34,37 +34,33 @@ if (empty($student_course)) {
 
 /* ================= ANNOUNCEMENTS ================= */
 $stmt = $conn->prepare("
-    SELECT a.*, 
+    SELECT a.*,
     CONCAT(t.first_name,' ',IFNULL(t.middle_name,''),' ',t.last_name,' ',IFNULL(t.suffix,'')) AS teacher_name
     FROM announcements a
     JOIN teachers t ON a.teacher_id = t.id
     WHERE (
-        (UPPER(TRIM(a.course_id)) = ? 
-        AND ((a.year_level = ? OR a.year_level = 'All') 
+        (UPPER(TRIM(a.course_id)) = ?
+        AND ((a.year_level = ? OR a.year_level = 'All')
         AND (a.section = ? OR a.section = 'All')))
-        OR 
+        OR
         (t.teacher_type IN ('Seeder', 'Administrator'))
     )
     ORDER BY a.pinned DESC, a.created_at DESC
 ");
-
 $stmt->bind_param("sss", $student_course, $student_year, $student_section);
 $stmt->execute();
 $annQuery = $stmt->get_result();
 
 /* ================= PROCESS DATA ================= */
-$pinnedAnnouncements = [];
+$pinnedAnnouncements  = [];
 $regularAnnouncements = [];
 
 while ($row = $annQuery->fetch_assoc()) {
-
-    // ✅ Safe defaults
     $row['priority'] = $row['priority'] ?? 'medium';
-    $row['pinned'] = $row['pinned'] ?? 0;
+    $row['pinned']   = $row['pinned']   ?? 0;
 
-    // ✅ Validate date
     if (empty($row['created_at']) || !strtotime($row['created_at'])) {
-        $row['created_at'] = date('Y-m-d H:i:s'); // fallback
+        $row['created_at'] = date('Y-m-d H:i:s');
     }
 
     if ($row['pinned']) {
@@ -73,15 +69,36 @@ while ($row = $annQuery->fetch_assoc()) {
         $regularAnnouncements[] = $row;
     }
 }
+
+/* ================= MARK ALL AS SEEN ================= */
+$all_ids = array_merge(
+    array_column($pinnedAnnouncements,  'id'),
+    array_column($regularAnnouncements, 'id')
+);
+
+if (!empty($all_ids)) {
+    $placeholders = implode(',', array_fill(0, count($all_ids), '?'));
+    $types        = str_repeat('i', count($all_ids));
+
+    $mark = $conn->prepare("
+        INSERT IGNORE INTO student_seen_announcements (student_id, announcement_id)
+        SELECT ?, id FROM announcements WHERE id IN ($placeholders)
+    ");
+
+    $params     = array_merge([$student_id], $all_ids);
+    $bind_types = 'i' . $types;
+    $mark->bind_param($bind_types, ...$params);
+    $mark->execute();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Announcements</title>
-
-<link rel="stylesheet" href="<?php echo asset('css/studentportal.css'); ?>">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <title>Announcements</title>
+    <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
+    <link rel="stylesheet" href="<?php echo asset('css/studentportal.css'); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
@@ -126,65 +143,54 @@ while ($row = $annQuery->fetch_assoc()) {
 
     <!-- PINNED -->
     <?php if (!empty($pinnedAnnouncements)): ?>
-    <h3>Pinned Announcements</h3>
+    <h3>📌 Pinned Announcements</h3>
 
     <?php foreach ($pinnedAnnouncements as $announcement):
-
-        $priority = $announcement['priority'] ?? 'medium';
-        $badgeClass = $priority == 'high' ? 'badge-red' : ($priority == 'medium' ? 'badge-yellow' : 'badge-blue');
-
-        // ✅ Safe date
-        $createdAt = strtotime($announcement['created_at'])
+        $priority   = $announcement['priority'] ?? 'medium';
+        $badgeClass = $priority === 'high' ? 'badge-red' : ($priority === 'medium' ? 'badge-yellow' : 'badge-blue');
+        $createdAt  = strtotime($announcement['created_at'])
             ? date('F j, Y h:i A', strtotime($announcement['created_at']))
             : 'N/A';
     ?>
-    
     <div class="card">
         <h3><?php echo htmlspecialchars($announcement['title'] ?? ''); ?></h3>
-
         <span class="badge <?php echo $badgeClass; ?>">
             <?php echo ucfirst($priority); ?>
         </span>
-
         <p>
             Teacher: <?php echo htmlspecialchars($announcement['teacher_name'] ?? ''); ?>
             | <?php echo $createdAt; ?>
         </p>
-
         <p><?php echo htmlspecialchars($announcement['content'] ?? ''); ?></p>
     </div>
-
     <?php endforeach; ?>
     <?php endif; ?>
 
     <!-- REGULAR -->
     <h3><?php echo !empty($pinnedAnnouncements) ? "All Announcements" : "Recent Announcements"; ?></h3>
 
+    <?php if (empty($regularAnnouncements)): ?>
+        <p style="color: var(--text-muted, #888);">No announcements at the moment.</p>
+    <?php endif; ?>
+
     <?php foreach ($regularAnnouncements as $announcement):
-
-        $priority = $announcement['priority'] ?? 'medium';
-        $badgeClass = $priority == 'high' ? 'badge-red' : ($priority == 'medium' ? 'badge-yellow' : 'badge-blue');
-
-        $createdAt = strtotime($announcement['created_at'])
+        $priority   = $announcement['priority'] ?? 'medium';
+        $badgeClass = $priority === 'high' ? 'badge-red' : ($priority === 'medium' ? 'badge-yellow' : 'badge-blue');
+        $createdAt  = strtotime($announcement['created_at'])
             ? date('F j, Y h:i A', strtotime($announcement['created_at']))
             : 'N/A';
     ?>
-
     <div class="card">
         <h3><?php echo htmlspecialchars($announcement['title'] ?? ''); ?></h3>
-
         <span class="badge <?php echo $badgeClass; ?>">
             <?php echo ucfirst($priority); ?>
         </span>
-
         <p>
             Teacher: <?php echo htmlspecialchars($announcement['teacher_name'] ?? ''); ?>
             | <?php echo $createdAt; ?>
         </p>
-
         <p><?php echo htmlspecialchars($announcement['content'] ?? ''); ?></p>
     </div>
-
     <?php endforeach; ?>
 
 </div>

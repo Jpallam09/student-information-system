@@ -4,7 +4,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Student-Teacher Portal</title>
+<title>Student-Teacher Portal</title>
+    <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
     <link rel="stylesheet" href="<?php echo asset('css/index.css'); ?>">
 </head>
 <body>
