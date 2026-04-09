@@ -29,21 +29,68 @@ if(isset($_GET['course']) && in_array($_GET['course'], $allowed_courses)){
 <meta charset="UTF-8">
 <title>Choose Program</title>
  <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= asset('css/admin.css') ?>">
 </head>
 <body>
 <div class="container">
     <div class="left-panel">
         <a href="<?= BASE_URL ?>Accesspage/teacher_login.php" class="back-arrow">↩</a>
-       <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>" alt="School Logo" style="width: 100px; display: block; margin: 80px auto 15px auto; border-radius: 5px; animation: float 3s ease-in-out infinite;">
-        <h2>Select Your Program</h2>
-        <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BSIT" class="btn">BSIT</a>
-        <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BSED" class="btn">BSED</a>
-        <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BAT" class="btn">BAT</a>
-        <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BTVTED" class="btn">BTVTED</a>
+       <div class="logo-wrap">
+           <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>" alt="School Logo">
+       </div>
+        <div class="panel-divider"></div>
+        <p class="portal-label">Select Your Program</p>
+        <div class="btn-group">
+            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BSIT" class="btn btn--primary">
+                <span class="btn__label">BSIT</span>
+                <span class="btn__arrow">→</span>
+            </a>
+            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BSED" class="btn btn--primary">
+                <span class="btn__label">BSED</span>
+                <span class="btn__arrow">→</span>
+            </a>
+            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BAT" class="btn btn--primary">
+                <span class="btn__label">BAT</span>
+                <span class="btn__arrow">→</span>
+            </a>
+            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BTVTED" class="btn btn--primary">
+                <span class="btn__label">BTVTED</span>
+                <span class="btn__arrow">→</span>
+            </a>
+        </div>
     </div>
     <div class="right-panel">
-        <h1>Choose Your Program<br>to Continue</h1>
+        <div class="right-content">
+            <div class="eyebrow">
+                <span class="eyebrow__line"></span>
+                <span class="eyebrow__text">Administrator</span>
+            </div>
+            <h1 class="main-title">
+                Choose Your<br>
+                <span class="main-title__accent">Program</span><br>
+                to Continue
+            </h1>
+            <p class="subtitle">
+                Select the academic program you manage to access your personalized admin dashboard and tools.
+            </p>
+            <div class="features">
+                <div class="feature-pill">
+                    <span class="feature-pill__dot"></span>
+                    Admin Access
+                </div>
+                <div class="feature-pill">
+                    <span class="feature-pill__dot"></span>
+                    Program Tools
+                </div>
+                <div class="feature-pill">
+                    <span class="feature-pill__dot"></span>
+                    Secure Setup
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 </body>

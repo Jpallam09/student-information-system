@@ -1,11 +1,28 @@
-# Professional Toggle Update Task
-Status: ✅ Complete
+# TODO.md - Panel Swap Task
 
-## Steps:
-- [x] 1. Create this TODO.md
-- [x] 2. Edit Accesspage/student_login.php (professional Font Awesome toggle)
-- [x] 3. Edit Accesspage/teacher_login.php (professional Font Awesome toggle)
-- [x] 4. Update TODO.md (mark complete)
-- [x] 5. Test & complete task
+## Plan Breakdown & Progress
 
-Updated both files with professional Font Awesome eye/eye-slash icons using efficient classList toggle function. Icons leverage existing CSS + Font Awesome CDN. Test by opening the login pages in browser (clear cache if needed).
+### ✅ Step 1: Understanding & Planning [COMPLETE]
+- Analyzed css/student.css, Accesspage/student_login.php, Accesspage/teacher_login.php
+- Created detailed swap plan (promo to left 62%, form to right 38%)
+
+### ✅ Step 2: Create TODO.md [COMPLETE]
+
+### ✅ Step 3: Edit css/student.css [COMPLETE]
+- ✅ Swap .left-panel/.right-panel widths & backgrounds (left 62% white promo, right 38% blue form)
+- ✅ Update form colors/contrast for blue right-panel (white text, enhanced focus/borders)
+- ✅ Reposition back-arrow to top-right of right-panel
+- ✅ Move accent to left-accent (promo panel)
+- ✅ Preserve animations, responsive design, btn styles
+
+### ⏳ Step 4: Testing
+- [ ] Verify student_login.php layout & functionality
+- [ ] Verify teacher_login.php layout & functionality  
+- [ ] Test form submission
+- [ ] Test responsive breakpoints (<820px, <540px)
+- [ ] Check hover states, password toggle, animations
+
+### ⏳ Step 5: Completion
+- [ ] Update TODO.md with completion status
+- [ ] attempt_completion with results
+
