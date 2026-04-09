@@ -42,24 +42,44 @@ $stmt->close();
 $course_id = $course_row['id'] ?? 0;
 
 /* =========================
-   FETCH SUBJECTS + GRADES
+   FETCH SUBJECTS + GRADES + TEACHER
+
+   Since grades has no teacher_id column, the teacher is matched
+   by joining teachers on:
+     - course       = student's course
+     - year_levels  contains the student's year level  (comma-separated)
+     - sections     contains the student's section     (comma-separated)
 ========================= */
 $stmt = $conn->prepare(
     "SELECT s.code AS subject_code,
             s.subject_name,
             g.quiz, g.homework, g.activities,
             g.prelim, g.midterm, g.final,
-            g.lab, g.letter_grade
+            g.lab, g.letter_grade,
+            CONCAT(t.first_name, ' ', t.last_name) AS teacher_name
      FROM subjects s
      LEFT JOIN grades g
         ON g.subject_id = s.id
         AND g.student_id = ?
+     LEFT JOIN teachers t
+        ON t.course = ?
+        AND FIND_IN_SET(?, t.year_levels) > 0
+        AND FIND_IN_SET(?, t.sections)    > 0
      WHERE s.course_id = ?
        AND s.year_level = ?
        AND s.section = ?
      ORDER BY s.subject_name ASC"
 );
-$stmt->bind_param("iiss", $student_id, $course_id, $year_level, $student_section);
+$stmt->bind_param(
+    "isssiis",
+    $student_id,       // g.student_id = ?
+    $course_name,      // t.course = ?
+    $year_level,       // FIND_IN_SET year_levels
+    $student_section,  // FIND_IN_SET sections
+    $course_id,        // s.course_id = ?
+    $year_level,       // s.year_level = ?
+    $student_section   // s.section = ?
+);
 $stmt->execute();
 $subjects_result = $stmt->get_result();
 ?>
@@ -67,9 +87,9 @@ $subjects_result = $stmt->get_result();
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Grades- Student Portal</title>
-     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
-     <link rel="stylesheet" href="<?= asset('css/studentportal.css') ?>">
+    <title>Grades - Student Portal</title>
+    <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
+    <link rel="stylesheet" href="<?= asset('css/studentportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -79,7 +99,7 @@ $subjects_result = $stmt->get_result();
 <div class="main-content">
 
     <div class="page-header">
-        <h2 class="page-title">Grades & Assessments</h2>
+        <h2 class="page-title">Grades &amp; Assessments</h2>
         <p class="page-subtitle">View your academic performance</p>
     </div>
 
@@ -120,24 +140,28 @@ $subjects_result = $stmt->get_result();
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while($sub = $subjects_result->fetch_assoc()): 
+                    <?php while($sub = $subjects_result->fetch_assoc()):
                         $grade = $sub['letter_grade'] ?? '-';
-                        if(in_array($grade, ["1.0","1.25","1.5"])) $badge="badge-green";
-                        elseif(in_array($grade, ["1.75","2.0"])) $badge="badge-blue";
-                        elseif(in_array($grade, ["2.25","2.5"])) $badge="badge-yellow";
-                        elseif($grade=="-") $badge="";
-                        else $badge="badge-red";
+                        if(in_array($grade, ["1.0","1.25","1.5"]))  $badge = "badge-green";
+                        elseif(in_array($grade, ["1.75","2.0"]))    $badge = "badge-blue";
+                        elseif(in_array($grade, ["2.25","2.5"]))    $badge = "badge-yellow";
+                        elseif($grade == "-")                        $badge = "";
+                        else                                         $badge = "badge-red";
+
+                        $teacher_display = !empty($sub['teacher_name'])
+                            ? htmlspecialchars($sub['teacher_name'])
+                            : '<span style="color:var(--color-text-tertiary,#aaa);font-style:italic;">Not Assigned</span>';
                     ?>
                     <tr>
                         <td><?= htmlspecialchars($sub['subject_name']) ?></td>
-                        <td>Teacher Not Assigned</td>
-                        <td><?= $sub['quiz'] ?? '-' ?></td>
-                        <td><?= $sub['homework'] ?? '-' ?></td>
+                        <td><?= $teacher_display ?></td>
+                        <td><?= $sub['quiz']       ?? '-' ?></td>
+                        <td><?= $sub['homework']   ?? '-' ?></td>
                         <td><?= $sub['activities'] ?? '-' ?></td>
-                        <td><?= $sub['prelim'] ?? '-' ?></td>
-                        <td><?= $sub['midterm'] ?? '-' ?></td>
-                        <td><?= $sub['final'] ?? '-' ?></td>
-                        <td><?= $sub['lab'] ?? '-' ?></td>
+                        <td><?= $sub['prelim']     ?? '-' ?></td>
+                        <td><?= $sub['midterm']    ?? '-' ?></td>
+                        <td><?= $sub['final']      ?? '-' ?></td>
+                        <td><?= $sub['lab']        ?? '-' ?></td>
                         <td><?= $badge ? "<span class='$badge'>$grade</span>" : '-' ?></td>
                     </tr>
                     <?php endwhile; ?>

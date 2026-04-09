@@ -15,11 +15,10 @@ $admin_types = ['Seeder', 'Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
 
 // ================== BUILD TEACHER FILTER ==================
-// Always initialize so variables exist even for admins
-$sy_params = []; $sy_types = '';   // subject year filter params
-$ss_params = []; $ss_types = '';   // subject section filter params
-$cy_params = []; $cy_types = '';   // class year filter params
-$cs_params = []; $cs_types = '';   // class section filter params
+$sy_params = []; $sy_types = '';
+$ss_params = []; $ss_types = '';
+$cy_params = []; $cy_types = '';
+$cs_params = []; $cs_types = '';
 
 $subject_year_filter    = '';
 $subject_section_filter = '';
@@ -68,9 +67,9 @@ if (isset($_POST['delete_class_id'])) {
 
 // ================== UPDATE CLASS ==================
 if (isset($_POST['update_class_id'])) {
-    $update_id        = intval($_POST['update_class_id']);
-    $section_post     = $_POST['section'];
-    $year_level_post  = $_POST['year_level'];
+    $update_id       = intval($_POST['update_class_id']);
+    $section_post    = $_POST['section'];
+    $year_level_post = $_POST['year_level'];
 
     $stmt_upd = $conn->prepare("UPDATE classes SET section=?, year_level=? WHERE id=?");
     $stmt_upd->bind_param("ssi", $section_post, $year_level_post, $update_id);
@@ -96,14 +95,13 @@ if (isset($_GET['action']) && $_GET['action'] == 'list_students'
         exit();
     }
 
-    // Build filter for this AJAX block independently
     $list_y_params = []; $list_y_types = '';
     $list_s_params = []; $list_s_types = '';
     $list_year_filter    = '';
     $list_section_filter = '';
     if (!$is_admin) {
-        $list_year_filter    = getCombinedYearFilter('year_level',  $list_y_params, $list_y_types);
-        $list_section_filter = getCombinedSectionFilter('section',  $list_s_params, $list_s_types);
+        $list_year_filter    = getCombinedYearFilter('year_level', $list_y_params, $list_y_types);
+        $list_section_filter = getCombinedSectionFilter('section', $list_s_params, $list_s_types);
     }
 
     $list_section    = $_GET['section'];
@@ -115,8 +113,8 @@ if (isset($_GET['action']) && $_GET['action'] == 'list_students'
                    AND section=? AND year_level=?
                  ORDER BY last_name ASC, first_name ASC";
 
-    $list_params  = [$selected_course];
-    $list_types   = "s";
+    $list_params = [$selected_course];
+    $list_types  = "s";
 
     if (!$is_admin) {
         if (!empty($list_y_params)) { $list_params = array_merge($list_params, $list_y_params); $list_types .= $list_y_types; }
@@ -179,7 +177,15 @@ $stmt_cid->close();
 $year_level     = $_GET['year_level']     ?? '';
 $section_filter = $_GET['section_filter'] ?? '';
 
-// ================== FETCH SUBJECTS (PREPARED) ==================
+// ================== YEAR LEVEL COLOR MAP ==================
+$year_colors = [
+    '1st Year' => ['bg' => '#eff6ff', 'accent' => '#3b82f6', 'dark' => '#1d4ed8'],
+    '2nd Year' => ['bg' => '#ecfdf5', 'accent' => '#10b981', 'dark' => '#059669'],
+    '3rd Year' => ['bg' => '#fffbeb', 'accent' => '#f59e0b', 'dark' => '#d97706'],
+    '4th Year' => ['bg' => '#fef2f2', 'accent' => '#ef4444', 'dark' => '#dc2626'],
+];
+
+// ================== FETCH SUBJECTS ==================
 $subj_sql    = "SELECT * FROM subjects s WHERE s.course_id=? $subject_year_filter $subject_section_filter";
 $subj_params = [$course_id];
 $subj_types  = "i";
@@ -189,16 +195,8 @@ if (!$is_admin) {
     if (!empty($ss_params)) { $subj_params = array_merge($subj_params, $ss_params); $subj_types .= $ss_types; }
 }
 
-if ($year_level) {
-    $subj_sql    .= " AND s.year_level=?";
-    $subj_params[] = $year_level;
-    $subj_types  .= "s";
-}
-if ($section_filter) {
-    $subj_sql    .= " AND s.section=?";
-    $subj_params[] = $section_filter;
-    $subj_types  .= "s";
-}
+if ($year_level)     { $subj_sql .= " AND s.year_level=?"; $subj_params[] = $year_level;     $subj_types .= "s"; }
+if ($section_filter) { $subj_sql .= " AND s.section=?";    $subj_params[] = $section_filter; $subj_types .= "s"; }
 
 $subj_sql .= " ORDER BY s.year_level ASC, s.subject_name ASC";
 
@@ -208,9 +206,7 @@ $stmt_subj->execute();
 $subjects_query = $stmt_subj->get_result();
 $stmt_subj->close();
 
-// ================== FETCH CLASSES (PREPARED) ==================
-// Build the WHERE clause first, then append GROUP BY / ORDER BY after
-// so GET-based filters (year_level, section_filter) can be safely injected.
+// ================== FETCH CLASSES ==================
 $class_sql    = "SELECT c.id, c.section, c.year_level,
                         COUNT(s.id) AS student_count
                  FROM classes c
@@ -228,18 +224,8 @@ if (!$is_admin) {
     if (!empty($cs_params)) { $class_params = array_merge($class_params, $cs_params); $class_types .= $cs_types; }
 }
 
-// ── FIX: apply GET dropdown filters for admin (and non-admin) ──────────────
-if ($year_level) {
-    $class_sql    .= " AND c.year_level = ?";
-    $class_params[] = $year_level;
-    $class_types  .= "s";
-}
-if ($section_filter) {
-    $class_sql    .= " AND c.section = ?";
-    $class_params[] = $section_filter;
-    $class_types  .= "s";
-}
-// ───────────────────────────────────────────────────────────────────────────
+if ($year_level)     { $class_sql .= " AND c.year_level = ?"; $class_params[] = $year_level;     $class_types .= "s"; }
+if ($section_filter) { $class_sql .= " AND c.section = ?";    $class_params[] = $section_filter; $class_types .= "s"; }
 
 $class_sql .= " GROUP BY c.id, c.section, c.year_level
                 ORDER BY c.year_level ASC, c.section ASC";
@@ -250,7 +236,6 @@ $stmt_class->execute();
 $classes_query = $stmt_class->get_result();
 $stmt_class->close();
 
-// Fetch dropdown years once for reuse
 $teacher_dropdown_years = getTeacherDropdownYears();
 ?>
 <!DOCTYPE html>
@@ -265,6 +250,104 @@ $teacher_dropdown_years = getTeacherDropdownYears();
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; color: white; }
         .badge-major { background-color: #3b82f6; }
         .badge-minor { background-color: #6b7280; }
+
+        /* ── Year-level color-coded class cards ── */
+        .class-card {
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+        }
+
+        .class-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        }
+
+        /* Coloured top stripe */
+        .class-card-stripe {
+            height: 6px;
+            width: 100%;
+        }
+
+        /* Card body */
+        .class-card-body {
+            padding: 18px 20px 16px;
+            background: white;
+        }
+
+        .class-card-year {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 3px 10px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+
+        .class-card h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #111827;
+            margin: 0 0 6px;
+        }
+
+        .class-card p {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin: 3px 0;
+        }
+
+        .class-card-stats {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .class-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .class-stat i {
+            font-size: 0.75rem;
+        }
+
+        .class-card .card-actions {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .class-card .card-actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .class-card .card-actions .edit-class   { background: #ecfdf5; color: #059669; }
+        .class-card .card-actions .edit-class:hover   { background: #d1fae5; }
+        .class-card .card-actions .delete-class { background: #fef2f2; color: #dc2626; }
+        .class-card .card-actions .delete-class:hover { background: #fecaca; }
     </style>
 </head>
 <body>
@@ -311,10 +394,6 @@ $teacher_dropdown_years = getTeacherDropdownYears();
                 </option>
             <?php endforeach; ?>
         </select>
-
-        <?php if ($section_filter || $year_level): ?>
-            <a href="?<?= http_build_query(array_filter($_GET, fn($v) => $v !== '', true)) ?>" style="margin-left:10px;"></a>
-        <?php endif; ?>
     </form>
 
     <!-- SUBJECT MANAGEMENT -->
@@ -390,35 +469,86 @@ $teacher_dropdown_years = getTeacherDropdownYears();
             <?php endif; ?>
         </div>
 
-        <div class="cards" style="margin-top:20px;">
+        <!-- Year level color legend -->
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin: 16px 0 4px;">
+            <?php foreach ($year_colors as $label => $clr): ?>
+                <span style="
+                    display: inline-flex; align-items: center; gap: 6px;
+                    font-size: 12px; font-weight: 600; color: <?= $clr['dark'] ?>;
+                    background: <?= $clr['bg'] ?>; padding: 4px 12px;
+                    border-radius: 20px; border: 1px solid <?= $clr['accent'] ?>33;">
+                    <span style="width:8px;height:8px;border-radius:50%;background:<?= $clr['accent'] ?>;display:inline-block;"></span>
+                    <?= $label ?>
+                </span>
+            <?php endforeach; ?>
+        </div>
+
+        <div class="cards" style="margin-top:16px;">
         <?php if ($classes_query && $classes_query->num_rows > 0): ?>
-            <?php while ($class = $classes_query->fetch_assoc()): ?>
-                <?php
-                // Subject count for this class (prepared)
+            <?php while ($class = $classes_query->fetch_assoc()):
+                // Subject count for this class
                 $stmt_sc = $conn->prepare("SELECT COUNT(*) AS count FROM subjects WHERE year_level=? AND section=? AND course_id=?");
                 $stmt_sc->bind_param("ssi", $class['year_level'], $class['section'], $course_id);
                 $stmt_sc->execute();
                 $subject_count = $stmt_sc->get_result()->fetch_assoc()['count'];
                 $stmt_sc->close();
-                ?>
-                <div class="card <?= !$is_admin ? 'clickable-card' : '' ?>"
+
+                // Resolve colors for this year level
+                $clr = $year_colors[$class['year_level']] ?? ['bg' => '#f9fafb', 'accent' => '#6b7280', 'dark' => '#374151'];
+            ?>
+                <div class="card class-card <?= !$is_admin ? 'clickable-card' : '' ?>"
                      data-id="<?= $class['id'] ?>"
                      data-section="<?= htmlspecialchars($class['section'], ENT_QUOTES) ?>"
                      data-year="<?= htmlspecialchars($class['year_level'], ENT_QUOTES) ?>"
+                     style="background: <?= $clr['bg'] ?>; border-color: <?= $clr['accent'] ?>33;"
                      <?php if (!$is_admin): ?>
                          onclick="openStudentModal(<?= $class['id'] ?>, '<?= addslashes($class['section']) ?>', '<?= addslashes($class['year_level']) ?>')"
-                         style="cursor:pointer;"
+                         style="cursor:pointer; background: <?= $clr['bg'] ?>; border-color: <?= $clr['accent'] ?>33;"
                      <?php endif; ?>>
 
-                    <h3>Section <?= htmlspecialchars($class['section']) ?></h3>
-                    <p>Year Level: <?= htmlspecialchars($class['year_level']) ?></p>
-                    <p><?= $class['student_count'] ?> Students | <?= $subject_count ?> Subjects</p>
+                    <!-- Coloured top stripe -->
+                    <div class="class-card-stripe" style="background: linear-gradient(90deg, <?= $clr['accent'] ?>, <?= $clr['dark'] ?>);"></div>
 
-                    <div class="card-actions">
+                    <div class="class-card-body">
+
+                        <!-- Admin action buttons -->
                         <?php if ($is_admin): ?>
-                            <a href="#" class="edit-class" title="Edit" onclick="event.stopPropagation();"><i class="fas fa-pencil-alt"></i></a>
-                            <a href="#" class="delete-class" title="Delete" onclick="event.stopPropagation();"><i class="fas fa-trash"></i></a>
+                        <div class="card-actions">
+                            <a href="#" class="edit-class" title="Edit" onclick="event.stopPropagation();">
+                                <i class="fas fa-pencil-alt"></i>
+                            </a>
+                            <a href="#" class="delete-class" title="Delete" onclick="event.stopPropagation();">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
                         <?php endif; ?>
+
+                        <!-- Year level pill -->
+                        <div class="class-card-year"
+                             style="background: <?= $clr['accent'] ?>20; color: <?= $clr['dark'] ?>; border: 1px solid <?= $clr['accent'] ?>44;">
+                            <i class="fas fa-circle" style="font-size:7px;"></i>
+                            <?= htmlspecialchars($class['year_level']) ?>
+                        </div>
+
+                        <h3>Section <?= htmlspecialchars($class['section']) ?></h3>
+
+                        <!-- Stats row -->
+                        <div class="class-card-stats">
+                            <div class="class-stat" style="color: <?= $clr['dark'] ?>;">
+                                <i class="fas fa-user-graduate"></i>
+                                <?= $class['student_count'] ?> Students
+                            </div>
+                            <div class="class-stat" style="color: <?= $clr['dark'] ?>;">
+                                <i class="fas fa-book"></i>
+                                <?= $subject_count ?> Subjects
+                            </div>
+                            <?php if (!$is_admin): ?>
+                            <div class="class-stat" style="color: <?= $clr['accent'] ?>; margin-left:auto;">
+                                <i class="fas fa-eye"></i> View Students
+                            </div>
+                            <?php endif; ?>
+                        </div>
+
                     </div>
                 </div>
             <?php endwhile; ?>

@@ -46,6 +46,70 @@ if (isset($_SESSION['student_id'])) {
         $unread_count = $uq->get_result()->fetch_assoc()['cnt'] ?? 0;
     }
 }
+
+// ── Pending tasks count ────────────────────────────────────────────────────
+$pending_tasks_count = 0;
+if (isset($_SESSION['student_id'])) {
+    global $conn;
+    $sid = $_SESSION['student_id'];
+
+    // Get student info (reuse $sdata if already fetched, otherwise re-fetch)
+    if (empty($sdata)) {
+        $s2 = $conn->prepare("SELECT course, year_level, section FROM students WHERE id = ?");
+        $s2->bind_param("i", $sid);
+        $s2->execute();
+        $sdata = $s2->get_result()->fetch_assoc();
+    }
+
+    if ($sdata) {
+        $scourse = strtoupper(trim($sdata['course']));
+        $syear   = $sdata['year_level'];
+        $ssec    = $sdata['section'];
+
+        // Get course ID
+        $cq = $conn->prepare("SELECT id FROM courses WHERE course_name = ?");
+        $cq->bind_param("s", $sdata['course']);
+        $cq->execute();
+        $cresult = $cq->get_result()->fetch_assoc();
+        $course_id = $cresult['id'] ?? 0;
+
+        if ($course_id) {
+            // Count total tasks assigned to student's subjects
+            $total_q = $conn->prepare("
+                SELECT COUNT(*) AS total
+                FROM tasks t
+                JOIN subjects s ON t.subject_id = s.id
+                WHERE s.course_id = ?
+                  AND s.year_level = ?
+                  AND (s.section IS NULL OR s.section = '' OR s.section = ?)
+                  AND (t.due_date IS NULL OR t.due_date >= NOW())
+            ");
+            $total_q->bind_param("iss", $course_id, $syear, $ssec);
+            $total_q->execute();
+            $total_tasks_row = $total_q->get_result()->fetch_assoc();
+            $total_tasks_for_student = (int)($total_tasks_row['total'] ?? 0);
+
+            // Count submitted tasks by this student (for active/non-overdue tasks)
+            $submitted_q = $conn->prepare("
+                SELECT COUNT(DISTINCT ts.task_id) AS submitted
+                FROM task_submissions ts
+                JOIN tasks t ON ts.task_id = t.id
+                JOIN subjects s ON t.subject_id = s.id
+                WHERE ts.student_id = ?
+                  AND s.course_id = ?
+                  AND s.year_level = ?
+                  AND (s.section IS NULL OR s.section = '' OR s.section = ?)
+                  AND (t.due_date IS NULL OR t.due_date >= NOW())
+            ");
+            $submitted_q->bind_param("iiss", $sid, $course_id, $syear, $ssec);
+            $submitted_q->execute();
+            $submitted_row = $submitted_q->get_result()->fetch_assoc();
+            $submitted_tasks = (int)($submitted_row['submitted'] ?? 0);
+
+            $pending_tasks_count = max(0, $total_tasks_for_student - $submitted_tasks);
+        }
+    }
+}
 // ──────────────────────────────────────────────────────────────────────────
 ?>
 <!DOCTYPE html>
@@ -180,10 +244,16 @@ if (isset($_SESSION['student_id'])) {
                 <?php endif; ?>
             </a>
 
+            <!-- My Tasks with pending badge -->
             <a href="<?php echo BASE_URL; ?>studentsportal/students_tasks.php"
                class="<?= $current == 'students_tasks.php' ? 'active' : '' ?>">
                 <i class="fas fa-tasks"></i>
                 <span class="link-label">My Tasks</span>
+                <?php if ($pending_tasks_count > 0): ?>
+                    <span class="notif-badge">
+                        <?php echo $pending_tasks_count > 99 ? '99+' : $pending_tasks_count; ?>
+                    </span>
+                <?php endif; ?>
             </a>
 
             <a href="<?php echo BASE_URL; ?>studentsportal/assessment.php"

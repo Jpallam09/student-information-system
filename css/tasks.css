@@ -319,8 +319,14 @@
     backdrop-filter: blur(5px);
 }
 
-.submissions-modal.show { display: flex !important; align-items: center; justify-content: center; }
+.submissions-modal.show {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
 
+/* FIX: modal-content is a flex column so header stays fixed
+   and only the body area scrolls */
 .submissions-modal .modal-content {
     background: white;
     margin: auto;
@@ -329,13 +335,16 @@
     width: 90%;
     max-width: 900px;
     max-height: 90vh;
-    overflow: hidden;
+    overflow: hidden;           /* clip the rounded corners */
+    display: flex;
+    flex-direction: column;     /* header fixed, body scrolls */
     box-shadow: 0 25px 50px rgba(0,0,0,0.25);
     animation: modalSlideIn 0.3s ease;
 }
 
 @keyframes modalSlideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
+/* Header never scrolls away */
 .submissions-modal .modal-header {
     background: linear-gradient(135deg, #1e77e3 0%, #7590f1 100%);
     color: white;
@@ -343,10 +352,24 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;             /* never shrink the header */
 }
 
 .submissions-modal .close { font-size: 28px; font-weight: bold; cursor: pointer; color: white; opacity: 0.8; }
 .submissions-modal .close:hover { opacity: 1; }
+
+/* FIX: #modalBody is the scrollable area — all student cards scroll here */
+#modalBody {
+    overflow-y: auto;
+    flex: 1;                    /* fill remaining modal height */
+    padding: 25px;
+}
+
+/* Scrollbar styling for modal body */
+#modalBody::-webkit-scrollbar        { width: 6px; }
+#modalBody::-webkit-scrollbar-track  { background: #f1f5f9; border-radius: 3px; }
+#modalBody::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 3px; }
+#modalBody::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 .student-group {
     border: 1px solid #e5e7eb;
@@ -362,7 +385,13 @@
     font-weight: 600;
 }
 
-.student-submissions { max-height: 400px; overflow-y: auto; padding: 0; }
+/* FIX: remove the inner scroll on student-submissions —
+   everything now scrolls together in #modalBody */
+.student-submissions {
+    max-height: none;
+    overflow-y: visible;
+    padding: 0;
+}
 
 .student-submission {
     padding: 15px 20px;
@@ -461,7 +490,7 @@
     .table-container th, .table-container td { padding: 12px; font-size: 0.85em; }
     .action-buttons { gap: 4px; }
     .action-btn { width: 28px; height: 28px; }
-    .submissions-modal .modal-content { width: 95%; margin: 10px; }
+    .submissions-modal .modal-content { width: 95%; margin: 10px; max-height: 95vh; }
     .student-submission { flex-direction: column; gap: 10px; }
 }
 

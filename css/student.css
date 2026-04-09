@@ -230,14 +230,15 @@ p {
 .toggle-password {
     position: absolute;
     right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
+    bottom: 0;
+    height: 46px;          /* match input height */
+    top: auto;
+    transform: none;
     cursor: pointer;
     font-size: 18px;
     transition: var(--transition-base);
     color: var(--text-muted);
     width: 30px;
-    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -245,11 +246,9 @@ p {
 }
 
 .toggle-password:hover {
-    transform: translateY(-50%) scale(1.1);
     background: var(--light-gray);
     color: var(--primary-navy);
 }
-
 /* Options Row */
 .options {
     display: flex;
