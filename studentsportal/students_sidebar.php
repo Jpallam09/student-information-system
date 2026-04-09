@@ -30,18 +30,20 @@ if (isset($_SESSION['student_id'])) {
             FROM announcements a
             JOIN teachers t ON a.teacher_id = t.id
             WHERE (
-                (UPPER(TRIM(a.course_id)) = ?
-                AND ((a.year_level = ? OR a.year_level = 'All')
-                AND (a.section = ? OR a.section = 'All')))
-                OR (t.teacher_type IN ('Seeder', 'Administrator'))
-            )
+                    (t.teacher_type IN ('Seeder', 'Administrator') AND UPPER(TRIM(a.course_id)) = ?)
+                    OR (
+                        UPPER(TRIM(a.course_id)) = ?
+                        AND (a.year_level = ? OR a.year_level = 'All')
+                        AND (a.section = ? OR a.section = 'All')
+                    )
+                )
             AND a.id NOT IN (
                 SELECT announcement_id
                 FROM student_seen_announcements
                 WHERE student_id = ?
             )
         ");
-        $uq->bind_param("sssi", $scourse, $syear, $ssec, $sid);
+$uq->bind_param("ssssi", $scourse, $scourse, $syear, $ssec, $sid);
         $uq->execute();
         $unread_count = $uq->get_result()->fetch_assoc()['cnt'] ?? 0;
     }
@@ -172,27 +174,28 @@ if (isset($_SESSION['student_id'])) {
             <i class="fas fa-sign-out-alt"></i>
         </a>
 
-        <div class="sidebar-header">
+        <div class="sidebar-logo-wrap">
             <img src="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>"
-                 alt="School Logo"
-                 style="width: 70px; display: block; margin: 40px auto 15px auto; border-radius: 5px; animation: float 3s ease-in-out infinite;">
-            <h2 style="margin-top: 5px;"><i class="fas fa-graduation-cap"></i> Student's Portal</h2>
-            <p class="sidebar-sub">
-                <?php
-                include_once PROJECT_ROOT . '/config/current_school_year.php';
-                $active_year = getActiveSchoolYear($conn) ?? 'Academic Year Not Set';
-                $active_sem  = getActiveSemester($conn) ?? '';
-
-                if (isset($_SESSION['student_id']) && isset($_SESSION['inactive_enrollment']) && $_SESSION['inactive_enrollment']) {
-                    $student_q = mysqli_query($conn, "SELECT school_year, semester FROM students WHERE id = {$_SESSION['student_id']}");
-                    if ($student_row = mysqli_fetch_assoc($student_q)) {
-                        echo 'Enrolled: ' . htmlspecialchars($student_row['school_year'] . ' ' . $student_row['semester'] . ' Sem') . ' | ';
-                    }
-                }
-                ?>
-                Active: <?php echo htmlspecialchars($active_year); ?> - <?php echo htmlspecialchars($active_sem); ?>
-            </p>
+                 alt="School Logo">
         </div>
+        <h2><i class="fas fa-graduation-cap"></i> Student&#39;s Portal</h2>
+        <p class="sidebar-sub">
+            <?php
+            include_once PROJECT_ROOT . '/config/current_school_year.php';
+            $active_year = getActiveSchoolYear($conn) ?? 'Academic Year Not Set';
+            $active_sem  = getActiveSemester($conn) ?? '';
+
+            if (isset($_SESSION['student_id']) && isset($_SESSION['inactive_enrollment']) && $_SESSION['inactive_enrollment']) {
+                $student_q = mysqli_query($conn, "SELECT school_year, semester FROM students WHERE id = {$_SESSION['student_id']}");
+                if ($student_row = mysqli_fetch_assoc($student_q)) {
+                    echo 'Enrolled: ' . htmlspecialchars($student_row['school_year'] . ' ' . $student_row['semester'] . ' Sem') . ' | ';
+                }
+            }
+            ?>
+            Active: <?php echo htmlspecialchars($active_year); ?> – <?php echo htmlspecialchars($active_sem); ?>
+        </p>
+
+        <div class="sidebar-divider"></div>
 
         <div class="menu">
 
@@ -232,25 +235,25 @@ if (isset($_SESSION['student_id'])) {
                 <span class="link-label">My Attendance</span>
             </a>
 
-            <!-- Announcements with unread badge -->
+        <!-- Announcements with unread badge -->
             <a href="<?php echo BASE_URL; ?>studentsportal/students_announcements.php"
                class="<?= $current == 'students_announcements.php' ? 'active' : '' ?>">
                 <i class="fas fa-bullhorn"></i>
                 <span class="link-label">Announcements</span>
                 <?php if ($unread_count > 0): ?>
-                    <span class="notif-badge">
+                    <span class="notification-badge">
                         <?php echo $unread_count > 99 ? '99+' : $unread_count; ?>
                     </span>
                 <?php endif; ?>
             </a>
 
-            <!-- My Tasks with pending badge -->
+        <!-- My Tasks with pending badge -->
             <a href="<?php echo BASE_URL; ?>studentsportal/students_tasks.php"
                class="<?= $current == 'students_tasks.php' ? 'active' : '' ?>">
                 <i class="fas fa-tasks"></i>
                 <span class="link-label">My Tasks</span>
                 <?php if ($pending_tasks_count > 0): ?>
-                    <span class="notif-badge">
+                    <span class="notification-badge">
                         <?php echo $pending_tasks_count > 99 ? '99+' : $pending_tasks_count; ?>
                     </span>
                 <?php endif; ?>

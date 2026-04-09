@@ -216,15 +216,23 @@ if ($chart_query) {
 // ============================================
 $announcements = [];
 $stmt = $conn->prepare("
-    SELECT * FROM announcements 
-    WHERE (course_id = ? OR course_id = 'ALL')
-    AND (year_level = ? OR year_level = 'All')
-    AND (section = ? OR section = 'All' OR section = '')
-    ORDER BY pinned DESC, created_at DESC
+    SELECT a.*, CONCAT(t.first_name,' ',IFNULL(t.middle_name,''),' ',t.last_name,' ',IFNULL(t.suffix,'')) AS teacher_name
+    FROM announcements a
+    JOIN teachers t ON a.teacher_id = t.id
+    WHERE (
+        (t.teacher_type IN ('Seeder', 'Administrator') AND UPPER(TRIM(a.course_id)) = ?)
+        OR (
+            UPPER(TRIM(a.course_id)) = ?
+            AND (a.year_level = ? OR a.year_level = 'All')
+            AND (a.section = ? OR a.section = 'All')
+        )
+    )
+    ORDER BY a.pinned DESC, a.created_at DESC
     LIMIT 3
 ");
 
-$stmt->bind_param("iss", $course_id, $year_level, $section);
+$course_bind = strtoupper(trim($course_name));
+$stmt->bind_param("ssss", $course_bind, $course_bind, $year_level, $section);
 $stmt->execute();
 $result = $stmt->get_result();
 

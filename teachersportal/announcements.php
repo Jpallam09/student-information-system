@@ -147,7 +147,9 @@ if ($is_admin) {
                a.course_id AS announcement_course
         FROM announcements a
         JOIN teachers t ON a.teacher_id = t.id
-        WHERE a.pinned = 1
+        WHERE a.course_id = '$selected_course' 
+          AND t.teacher_type IN ('Seeder','Administrator')
+          AND a.pinned = 1
         ORDER BY a.created_at DESC
     ");
 
@@ -158,7 +160,9 @@ if ($is_admin) {
                a.course_id AS announcement_course
         FROM announcements a
         JOIN teachers t ON a.teacher_id = t.id
-        WHERE a.pinned = 0
+        WHERE a.course_id = '$selected_course' 
+          AND t.teacher_type IN ('Seeder','Administrator')
+          AND a.pinned = 0
         ORDER BY a.created_at DESC
     ");
 } else {

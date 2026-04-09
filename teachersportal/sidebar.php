@@ -43,11 +43,18 @@ if (!$is_admin && isset($_SESSION['teacher_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Dashboard</title>
     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        /* ── Sidebar flex gap + label fill ── */
+        .sidebar a                 { gap: 10px; }
+        .sidebar a span.link-label { flex: 1; }
+
         /* ── Notification badge ── */
-        .notif-badge {
+        .notification-badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -62,19 +69,6 @@ if (!$is_admin && isset($_SESSION['teacher_id'])) {
             margin-left: auto;
             line-height: 1;
             flex-shrink: 0;
-        }
-        /* Make sidebar links flex so badge sits on the right */
-        .sidebar a {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .sidebar a .fas {
-            width: 16px;
-            flex-shrink: 0;
-        }
-        .sidebar a span.link-label {
-            flex: 1;
         }
     </style>
 </head>
@@ -92,18 +86,21 @@ if (!$is_admin && isset($_SESSION['teacher_id'])) {
         <a href="#" class="back-arrow logout-btn" onclick="showLogoutConfirmation(event)">
             <i class="fas fa-sign-out-alt"></i>
         </a>
-        <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>"
-             alt="School Logo"
-             style="width: 80px; display: block; margin: 40px auto 15px auto; border-radius: 5px;">
+        <div class="sidebar-logo-wrap">
+            <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>"
+                 alt="School Logo">
+        </div>
         <?php if ($is_admin): ?>
-        <h2 style="margin-top: 5px;"><i class="fas fa-user-shield"></i> Admin's Portal</h2>
+        <h2><i class="fas fa-user-shield"></i> Admin's Portal</h2>
         <?php else: ?>
-        <h2 style="margin-top: 5px;"><i class="fas fa-chalkboard-teacher"></i> Teacher's Portal</h2>
-        
+        <h2><i class="fas fa-chalkboard-teacher"></i> Teacher's Portal</h2>
+
         <p class="sidebar-sub">
-            Active: <?php echo htmlspecialchars($active_year); ?> - <?php echo htmlspecialchars($active_sem); ?>
+            Active: <?php echo htmlspecialchars($active_year); ?> – <?php echo htmlspecialchars($active_sem); ?>
         </p>
         <?php endif; ?>
+
+        <div class="sidebar-divider"></div>
 
         <a href="<?= BASE_URL ?>teachersportal/dashboard.php" class="<?= $current == 'dashboard.php' ? 'active' : '' ?>">
             <i class="fas fa-th-large"></i>

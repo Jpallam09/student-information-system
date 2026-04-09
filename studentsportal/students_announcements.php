@@ -39,15 +39,16 @@ $stmt = $conn->prepare("
     FROM announcements a
     JOIN teachers t ON a.teacher_id = t.id
     WHERE (
-        (UPPER(TRIM(a.course_id)) = ?
-        AND ((a.year_level = ? OR a.year_level = 'All')
-        AND (a.section = ? OR a.section = 'All')))
-        OR
-        (t.teacher_type IN ('Seeder', 'Administrator'))
+        (t.teacher_type IN ('Seeder', 'Administrator') AND UPPER(TRIM(a.course_id)) = ?)
+        OR (
+            UPPER(TRIM(a.course_id)) = ?
+            AND (a.year_level = ? OR a.year_level = 'All')
+            AND (a.section = ? OR a.section = 'All')
+        )
     )
     ORDER BY a.pinned DESC, a.created_at DESC
 ");
-$stmt->bind_param("sss", $student_course, $student_year, $student_section);
+$stmt->bind_param("ssss", $student_course, $student_course, $student_year, $student_section);
 $stmt->execute();
 $annQuery = $stmt->get_result();
 

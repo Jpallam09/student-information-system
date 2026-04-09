@@ -2,7 +2,7 @@
 require_once dirname(__DIR__) . '/config/paths.php';
 require_once PROJECT_ROOT . '/config/database.php';
 
-$teacher_id = "00-0000";
+$teacher_id = "00-1978s";
 $first_name = "System";
 $middle_name = ""; // optional
 $last_name = "Administrator";
@@ -17,7 +17,7 @@ $mobile = "09171234567";
 $home_address = "School Campus, San Mateo, Isabela";
 $emergency_person = "Maccoy Tabios"; // example emergency contact
 $emergency_number = "09179876543";
-$password = password_hash("Registrar123", PASSWORD_DEFAULT); // hashed password
+$password = password_hash("registrar1978", PASSWORD_DEFAULT); // hashed password
 
 // Check if admin already exists
 $stmt = $conn->prepare("SELECT * FROM teachers WHERE teacher_id = ?");
