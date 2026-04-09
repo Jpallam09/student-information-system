@@ -37,3 +37,8 @@
 2026-04-02 01:46:52 - Delete attempt id: 17, affected: 0, error: 
 2026-04-02 01:46:59 - POST DATA: {"delete_year":"17"}
 2026-04-02 01:46:59 - Delete attempt id: 17, affected: 0, error: 
+2026-04-09 07:18:09 - POST DATA: {"set_active":"26"}
+2026-04-09 07:19:33 - POST DATA: {"set_active":"26"}
+2026-04-09 07:22:02 - POST DATA: {"set_active":"26"}
+2026-04-09 07:22:53 - POST DATA: {"set_active":"27"}
+2026-04-09 07:23:08 - POST DATA: {"set_active":"27"}

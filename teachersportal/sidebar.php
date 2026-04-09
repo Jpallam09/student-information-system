@@ -1,5 +1,7 @@
 <?php
 require_once dirname(__DIR__) . '/config/paths.php';
+include_once CONFIG_PATH . 'current_school_year.php';
+
 $current = basename($_SERVER['PHP_SELF']);
 
 // Default back_url if not set
@@ -10,6 +12,9 @@ if (!isset($back_url)) {
 // Check if user is admin
 $admin_types = ['Seeder', 'Administrator'];
 $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
+
+$active_year = getActiveSchoolYear($conn) ?? 'Academic Year Not Set';
+$active_sem  = getActiveSemester($conn) ?? '';
 
 // ── Unread task submissions count (teacher POV) ───────────────────────────
 // Uses t.teacher_id — same column tasks.php uses — so the count always matches.
@@ -94,6 +99,10 @@ if (!$is_admin && isset($_SESSION['teacher_id'])) {
         <h2 style="margin-top: 5px;"><i class="fas fa-user-shield"></i> Admin's Portal</h2>
         <?php else: ?>
         <h2 style="margin-top: 5px;"><i class="fas fa-chalkboard-teacher"></i> Teacher's Portal</h2>
+        
+        <p class="sidebar-sub">
+            Active: <?php echo htmlspecialchars($active_year); ?> - <?php echo htmlspecialchars($active_sem); ?>
+        </p>
         <?php endif; ?>
 
         <a href="<?= BASE_URL ?>teachersportal/dashboard.php" class="<?= $current == 'dashboard.php' ? 'active' : '' ?>">

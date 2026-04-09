@@ -62,14 +62,23 @@ $date             = $_POST['date'] ?? $_GET['date'] ?? date('Y-m-d');
 // We use a plain query here because $teacher_year_filter may contain
 // literal IN() values (not bound params) from getAutoTeacherYearFilter().
 $safe_course = mysqli_real_escape_string($conn, $selected_course);
-$sec_where   = "WHERE course = '$safe_course' $teacher_year_filter";
+$sec_query = "SELECT DISTINCT section FROM students WHERE course = ? " . getAutoTeacherYearFilter('year_level');
+
 if ($selected_year) {
     $safe_year = mysqli_real_escape_string($conn, $selected_year);
-    $sec_where .= " AND year_level = '$safe_year'";
+    $sec_query .= " AND year_level = ?";
+    $stmt_sec = $conn->prepare($sec_query);
+    $stmt_sec->bind_param("ss", $safe_course, $safe_year);
+} else {
+    $stmt_sec = $conn->prepare($sec_query);
+    $stmt_sec->bind_param("s", $safe_course);
 }
-$sec_result = mysqli_query($conn, "SELECT DISTINCT section FROM students $sec_where ORDER BY section");
-$sections   = [];
-while ($row = mysqli_fetch_assoc($sec_result)) {
+$stmt_sec->execute();
+$sec_result = $stmt_sec->get_result();
+$stmt_sec->close();
+
+$sections = [];
+while ($row = $sec_result->fetch_assoc()) {
     $sections[] = $row['section'];
 }
 
@@ -104,21 +113,33 @@ if (isset($_POST['save_attendance'])) {
 // Build a plain query so the literal IN() clauses from getCombinedYearFilter /
 // getCombinedSectionFilter are injected correctly (they are already escaped
 // internally by addslashes() inside teacher_filter.php).
-$stu_where = "WHERE course = '$safe_course' $teacher_year_filter $teacher_section_filter";
+$safe_year = $selected_year ? mysqli_real_escape_string($conn, $selected_year) : '';
+$safe_section = $selected_section ? mysqli_real_escape_string($conn, $selected_section) : '';
+
+$stu_base = "SELECT id, student_id, first_name, last_name, section, year_level FROM students 
+             WHERE course = ? " . getAutoTeacherYearFilter('year_level') . getAutoTeacherSectionFilter('section');
+
+$params = [$safe_course]; 
+$types = 's';
+
 if ($selected_year) {
-    $safe_year = mysqli_real_escape_string($conn, $selected_year);
-    $stu_where .= " AND year_level = '$safe_year'";
+    $stu_base .= " AND year_level = ?";
+    $params[] = $safe_year; 
+    $types .= 's';
 }
 if ($selected_section) {
-    $safe_section = mysqli_real_escape_string($conn, $selected_section);
-    $stu_where   .= " AND section = '$safe_section'";
+    $stu_base .= " AND section = ?";
+    $params[] = $safe_section; 
+    $types .= 's';
 }
 
-$students_result = mysqli_query($conn,
-    "SELECT id, student_id, first_name, last_name, section, year_level
-     FROM students $stu_where
-     ORDER BY section, last_name"
-);
+$stu_base .= " ORDER BY section, last_name";
+
+$stmt_stu = $conn->prepare($stu_base);
+$stmt_stu->bind_param($types, ...$params);
+$stmt_stu->execute();
+$students_result = $stmt_stu->get_result();
+$stmt_stu->close();
 
 // ================== FETCH CURRENT ATTENDANCE ==================
 $current_attendance = [];
