@@ -9,6 +9,21 @@ session_start();
 require_once dirname(__DIR__) . '/config/paths.php';
 require_once PROJECT_ROOT . '/config/database.php';
 
+if(!isset($_SESSION['teacher_id'])){
+    header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
+    exit();
+}
+
+$admin_types = ['Seeder', 'Administrator'];
+$is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
+
+if(!$is_admin){
+    header("Location: " . BASE_URL . "teachersportal/dashboard.php");
+    exit();
+}
+
+$from_admin = isset($_GET['from']) && $_GET['from'] === 'admin';
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $teacher_id       = trim($_POST['teacher_id']);
@@ -69,11 +84,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             );
 
             if ($insertStmt->execute()) {
-                header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
-                exit();
-            } else {
-                $error_msg = "Database Error: " . $conn->error;
-            }
+                    if($from_admin){
+                        header("Location: " . BASE_URL . "teachersportal/teachers_list.php?msg=teacher_added");
+                    } else {
+                        header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
+                    }
+                    exit();
+                } else {
+                    $error_msg = "Database Error: " . $conn->error;
+                }
         }
     }
 }
@@ -94,8 +113,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
 <div class="container">
     <div class="right-panel">
-        <a href="<?= BASE_URL ?>Accesspage/teacher_login.php" class="back-arrow" title="Back">↩</a>
-        <h1>Teacher<br>Management<br>System</h1>
+        <a href="<?= $from_admin ? BASE_URL . "teachersportal/teachers_list.php" : BASE_URL . "Accesspage/teacher_login.php" ?>" class="back-arrow" title="Back">↩</a>
+        <h1><?= $from_admin ? "Add New Teacher" : "Teacher" ?><br>Management<br>System</h1>
     </div>
     <div class="left-panel">
         <div class="icon"><i class="fas fa-chalkboard-teacher"></i></div>

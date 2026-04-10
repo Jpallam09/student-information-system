@@ -1,7 +1,8 @@
-# Tasks.php Centering Task ✅ COMPLETE
+# Task: Fix admin add teacher back button redirect to teachers_login.php instead of teachers_list.php
 
-- [x] 1. Analyzed files and created plan
-- [x] 2. Created TODO.md ✅
-- [x] 3. Added inline <style> block to center .content in teachersportal/tasks.php  
-- [x] 4. Verified layout on desktop/mobile  
-- [x] 5. Task complete - attempt_completion
+## Steps:
+- [x] 1. Edit Accesspage/teachers_register.php: add admin session check, dynamic back href, admin success redirect to teachers_list.php
+- [x] 2. Test the flow
+- [ ] 3. Complete task
+
+Progress: Fixes applied and syntax corrected. teachers_list.php can handle ?msg=teacher_added optionally.

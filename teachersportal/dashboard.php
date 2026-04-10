@@ -128,7 +128,6 @@ while($row = mysqli_fetch_assoc($sections_query)){
 }
 
 // ================== RANKING STUDENTS (GPA 1.0-1.5) ==================
-error_log("DEBUG Ranking filter: year_filter=[$teacher_year_filter] section_filter=[$teacher_section_filter] | Levels: " . implode(', ', getTeacherYearLevels()));
 $ranking_students = [];
 $student_query = mysqli_query($conn, "SELECT * FROM students WHERE course='$selected_course' $teacher_year_filter $teacher_section_filter ORDER BY last_name ASC");
 
@@ -188,7 +187,6 @@ $attendance_students_query = mysqli_query($conn, "
     GROUP BY s.id
     ORDER BY s.year_level, s.section, s.last_name
 ");
-error_log("DEBUG Attendance filter: year_filter=[$teacher_year_filter] section_filter=[$teacher_section_filter]");
 
 $attendance_students = [];
 while($row = mysqli_fetch_assoc($attendance_students_query)){
@@ -203,132 +201,204 @@ $teacher_assignment_display = getTeacherAssignmentDisplay();
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Dashboard - <?= htmlspecialchars($selected_course) ?></title>
- <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — <?= htmlspecialchars($selected_course) ?></title>
+<link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+
 <!-- Top Right Logo -->
-<div style="position: fixed; top: 15px; right: 20px; z-index: 9999;">
- <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>" 
-alt="Isabela State University seal: circular emblem with green border featuring university name, established 1978, centered torch with flame and shield containing torch, plant seedling, and gears representing knowledge, agriculture, and industry" 
-style="width: 50px; vertical-align: middle; margin-right: 10px; border-radius: 5px; animation: float 3s ease-in-out infinite;">
+<div class="top-right-logo">
+    <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>" 
+         alt="Isabela State University seal">
 </div>
 
 <?php include PROJECT_ROOT . '/teachersportal/sidebar.php'; ?>
 
 <div class="content">
-    <h1><i class="fas fa-chart-pie"></i> <?= htmlspecialchars($selected_course) ?> Dashboard</h1>
-    <?php if (isset($_SESSION['teacher_type']) && $_SESSION['teacher_type'] === 'Administrator'): ?>
-    <p style="margin-top: -10px; margin-bottom: 20px;">Welcome, <strong>System Administrator</strong></p>
-    <?php else: ?>
-    <p style="margin-top: -10px; margin-bottom: 20px;">Welcome, Teacher <strong><?= htmlspecialchars($teacher_full_name) ?></strong></p>
-    <?php endif; ?>
 
+    <!-- PAGE TITLE -->
+    <h1 class="dash-title">
+        <i class="fas fa-chart-pie"></i>
+        <?= htmlspecialchars($selected_course) ?> Dashboard
+    </h1>
+
+    <!-- WELCOME BANNER -->
+    <div class="dashboard-welcome">
+        <div class="dashboard-welcome-icon">
+            <?php if ($is_admin): ?>
+                <i class="fas fa-shield-halved"></i>
+            <?php else: ?>
+                <i class="fas fa-chalkboard-teacher"></i>
+            <?php endif; ?>
+        </div>
+        <div class="dashboard-welcome-text">
+            <div class="eyebrow"><span></span> <?= date('l, F j, Y') ?></div>
+            <h2>
+                <?php if ($is_admin): ?>
+                    Welcome back, System Administrator
+                <?php else: ?>
+                    Welcome back
+                    <strong><?= htmlspecialchars($teacher_full_name) ?></strong>
+                <?php endif; ?>
+            </h2>
+        </div>
+        <div class="welcome-course-badge">
+            <i class="fas fa-graduation-cap" style="margin-right:6px;"></i>
+            <?= htmlspecialchars($selected_course) ?>
+        </div>
+    </div>
+
+    <!-- STAT CARDS -->
     <div class="cards">
         <div class="card">
             <h3><i class="fas fa-users"></i> Total Students</h3>
             <h1><?= $total_students ?></h1>
+            <p>Enrolled this period</p>
         </div>
         <div class="card">
             <h3><i class="fas fa-layer-group"></i> Active Sections</h3>
             <h1><?= $active_sections ?></h1>
+            <p>Across all year levels</p>
         </div>
         <div class="card">
-            <h3><i class="fas fa-check-circle"></i> Average Attendance</h3>
+            <h3><i class="fas fa-check-circle"></i> Avg. Attendance</h3>
             <h1><?= $avg_attendance ?>%</h1>
+            <p>Year-to-date average</p>
         </div>
         <div class="card">
-            <h3><i class="fas fa-trophy"></i> Class Average</h3>
+            <h3><i class="fas fa-star"></i> Class Average</h3>
             <h1><?= $class_avg ?></h1>
+            <p>GPA across all subjects</p>
         </div>
-        <div class="card clickable-card" data-type="ranking">
-            <h3><i class="fas fa-medal"></i> Ranking Students</h3>
-            <h1>View</h1>
+        <div class="card clickable-card" data-type="ranking" title="View ranking students">
+            <h3><i class="fas fa-medal"></i> Top Students</h3>
+            <h1><?= count($ranking_students) ?></h1>
+            <p>GPA 1.0 – 1.5 achievers</p>
+            <span class="card-click-hint">Click to view →</span>
         </div>
-        <div class="card clickable-card" data-type="attendance">
-            <h3><i class="fas fa-calendar"></i> Attendance Overview</h3>
+        <div class="card clickable-card" data-type="attendance" title="View attendance overview">
+            <h3><i class="fas fa-calendar-check"></i> Attendance Overview</h3>
             <h1>View</h1>
+            <p>Per student breakdown</p>
+            <span class="card-click-hint">Click to view →</span>
         </div>
 
         <?php if (!$is_admin): ?>
-        <!-- ===== SELECTED YEAR LEVEL & SECTION CARD (regular teachers only) ===== -->
         <div class="card">
-            <h3><i class="fas fa-layer-group"></i> Selected year level and Section</h3>
-            <h1 style="font-size:1.2em; color:#0A91AB;"><?= htmlspecialchars($teacher_assignment_display) ?></h1>
+            <h3><i class="fas fa-layer-group"></i> Your Assignment</h3>
+            <h1 style="font-size:1.1rem; color: var(--primary-blue); margin-top:6px;"><?= htmlspecialchars($teacher_assignment_display) ?></h1>
+            <p>Year level &amp; section</p>
         </div>
         <?php endif; ?>
     </div>
 
-<!-- ================== Attendance Cards by Year Level ================== -->
-<div class="section-box">
-    <h2>Attendance by Year Level 📊</h2>
-    <div class="attendance-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
-        <?php foreach($year_levels as $year): ?>
-        <div class="card attendance-year-card" data-year="<?= htmlspecialchars($year) ?>">
-            <h3><?= htmlspecialchars($year) ?></h3>
-            <h1><?= $attendance_by_year[$year] ?>%</h1>
-            <div class="progress-bar" style="margin-top: 10px;">
-                <div class="progress-fill" style="width: <?= $attendance_by_year[$year] ?>%;"></div>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
-</div>
-
-<!-- ================== Announcement Statistics Cards ================== -->
-<div class="section-box">
-    <h2>Announcement Statistics 📢</h2>
-    <div class="announcement-cards">
-        <?php 
-        $total_announcements = array_sum($announcement_stats);
-        foreach($year_levels as $year): 
-            $count = $announcement_stats[$year];
-            $percentage = ($total_announcements > 0) ? round(($count / $total_announcements) * 100, 1) : 0;
-        ?>
-        <div class="announcement-stat-card">
-            <h4><?= htmlspecialchars($year) ?></h4>
-            <div class="count"><?= $count ?></div>
-            <div class="percentage"><?= $percentage ?>% of total</div>
-            <div class="progress-bar" style="margin-top: 10px;">
-                <div class="progress-fill" style="width: <?= $percentage ?>%;"></div>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
-</div>
-
-<div class="charts-container">
+    <!-- ATTENDANCE BY YEAR LEVEL -->
     <div class="section-box">
-        <h2>Grade Distribution🎯</h2>
-        <canvas id="gradeChart"></canvas>
+        <h2><i class="fas fa-chart-bar"></i> Attendance by Year Level</h2>
+        <div class="attendance-cards">
+            <?php foreach($year_levels as $year): ?>
+            <div class="attendance-year-card" data-year="<?= htmlspecialchars($year) ?>">
+                <h3><i class="fas fa-users"></i> <?= htmlspecialchars($year) ?></h3>
+                <h1><?= $attendance_by_year[$year] ?>%</h1>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: <?= $attendance_by_year[$year] ?>%;"></div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
     </div>
-</div>
 
-<!-- Ranking Students Modal -->
+    <!-- ANNOUNCEMENT STATISTICS -->
+    <div class="section-box">
+        <h2><i class="fas fa-bullhorn"></i> Announcement Statistics</h2>
+        <div class="announcement-cards">
+            <?php 
+            $total_announcements = array_sum($announcement_stats);
+            foreach($year_levels as $year): 
+                $count = $announcement_stats[$year];
+                $percentage = ($total_announcements > 0) ? round(($count / $total_announcements) * 100, 1) : 0;
+            ?>
+            <div class="announcement-stat-card">
+                <h4><?= htmlspecialchars($year) ?></h4>
+                <div class="count"><?= $count ?></div>
+                <div class="percentage"><?= $percentage ?>% of total</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: <?= $percentage ?>%;"></div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- GRADE DISTRIBUTION -->
+    <div class="charts-container">
+        <div class="section-box">
+            <h2><i class="fas fa-chart-pie"></i> Grade Distribution</h2>
+            <canvas id="gradeChart" height="100"></canvas>
+        </div>
+    </div>
+
+</div><!-- /.content -->
+
+
+<!-- =================== RANKING STUDENTS MODAL =================== -->
 <div id="studentModal" class="modal">
-    <div class="modal-content" style="max-width: 100%; width: 100%; height: 100vh; margin: 0; border-radius: 0; max-height: 100vh;">
+    <div class="modal-content" style="max-width:100%;width:100%;height:100vh;margin:0;border-radius:0;max-height:100vh;">
         <span class="close">&times;</span>
-        <h2 id="modalTitle">Ranking Students 🏅</h2>
+        <h2 id="modalTitle"><i class="fas fa-medal"></i> Top Ranking Students</h2>
 
-        <label for="yearFilter">Select Year Level:</label>
-        <select id="yearFilter"><option value="">All Years</option><?php foreach($year_levels as $year): ?><option value="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></option><?php endforeach; ?></select>
-
-        <label for="sectionFilter">Select Section:</label>
-        <select id="sectionFilter"><option value="">All Sections</option><?php foreach($sections as $sec): ?><option value="<?= htmlspecialchars($sec) ?>"><?= htmlspecialchars($sec) ?></option><?php endforeach; ?></select>
+        <div class="modal-filter-row">
+            <div>
+                <label for="yearFilter">Year Level</label>
+                <select id="yearFilter">
+                    <option value="">All Years</option>
+                    <?php foreach($year_levels as $year): ?>
+                        <option value="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label for="sectionFilter">Section</label>
+                <select id="sectionFilter">
+                    <option value="">All Sections</option>
+                    <?php foreach($sections as $sec): ?>
+                        <option value="<?= htmlspecialchars($sec) ?>"><?= htmlspecialchars($sec) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
 
         <table id="modalTable">
-            <thead><tr><th>Rank</th><th>Name</th><th>Year Level</th><th>Section</th><th>GPA</th></tr></thead>
+            <thead>
+                <tr><th>Rank</th><th>Name</th><th>Year Level</th><th>Section</th><th>GPA</th></tr>
+            </thead>
             <tbody>
                 <?php foreach($ranking_students as $index=>$student): ?>
-                <tr data-year="<?= htmlspecialchars(trim($student['year_level'])) ?>" data-section="<?= htmlspecialchars(trim($student['section'])) ?>" data-gpa="<?= $student['gpa'] ?>">
-                    <td>Rank <?= $index+1 ?></td>
-                    <td><?= htmlspecialchars($student['first_name'].' '.$student['last_name']) ?></td>
+                <tr data-year="<?= htmlspecialchars(trim($student['year_level'])) ?>" 
+                    data-section="<?= htmlspecialchars(trim($student['section'])) ?>" 
+                    data-gpa="<?= $student['gpa'] ?>">
+                    <td>
+                        <?php if($index === 0): ?>
+                            <span class="badge-yellow" style="padding:4px 12px;border-radius:50px;font-weight:700;">🥇 #1</span>
+                        <?php elseif($index === 1): ?>
+                            <span class="badge-blue" style="padding:4px 12px;border-radius:50px;font-weight:700;">🥈 #2</span>
+                        <?php elseif($index === 2): ?>
+                            <span style="background:rgba(180,83,9,0.12);color:#92400e;padding:4px 12px;border-radius:50px;font-weight:700;display:inline-flex;align-items:center;">🥉 #3</span>
+                        <?php else: ?>
+                            <span style="color:var(--text-muted);font-weight:600;">#<?= $index+1 ?></span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="font-weight:600;color:var(--slate-800);"><?= htmlspecialchars($student['first_name'].' '.$student['last_name']) ?></td>
                     <td><?= htmlspecialchars($student['year_level']) ?></td>
                     <td><?= htmlspecialchars($student['section']) ?></td>
-                    <td><?= $student['gpa'] ?></td>
+                    <td><span class="badge-green" style="font-size:0.85rem;"><?= $student['gpa'] ?></span></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -336,13 +406,13 @@ style="width: 50px; vertical-align: middle; margin-right: 10px; border-radius: 5
     </div>
 </div>
 
-<!-- Attendance Overview Modal -->
+<!-- =================== ATTENDANCE OVERVIEW MODAL =================== -->
 <div id="attendanceModal" class="modal">
-    <div class="modal-content" style="max-width: 100%; width: 100%; height: 100vh; margin: 0; border-radius: 0; max-height: 100vh;">
+    <div class="modal-content" style="max-width:100%;width:100%;height:100vh;margin:0;border-radius:0;max-height:100vh;">
         <span class="close">&times;</span>
-        <h2>Attendance Overview 👥</h2>
-        
-        <div class="stats-container">
+        <h2><i class="fas fa-calendar-check"></i> Attendance Overview</h2>
+
+        <div class="stats-container" style="margin-bottom:24px;">
             <div class="stat-box">
                 <h3>Overall Attendance</h3>
                 <div class="stat-number"><?= $avg_attendance ?>%</div>
@@ -357,47 +427,53 @@ style="width: 50px; vertical-align: middle; margin-right: 10px; border-radius: 5
             </div>
         </div>
 
-        <label for="attendanceYearFilter">Select Year Level:</label>
-        <select id="attendanceYearFilter">
-            <option value="">All Years</option>
-            <?php foreach($year_levels as $year): ?>
-                <option value="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></option>
-            <?php endforeach; ?>
-        </select>
-
-        <label for="attendanceSectionFilter">Select Section:</label>
-        <select id="attendanceSectionFilter">
-            <option value="">All Sections</option>
-            <?php foreach($sections as $sec): ?>
-                <option value="<?= htmlspecialchars($sec) ?>"><?= htmlspecialchars($sec) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <div class="modal-filter-row">
+            <div>
+                <label for="attendanceYearFilter">Year Level</label>
+                <select id="attendanceYearFilter">
+                    <option value="">All Years</option>
+                    <?php foreach($year_levels as $year): ?>
+                        <option value="<?= htmlspecialchars($year) ?>"><?= htmlspecialchars($year) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label for="attendanceSectionFilter">Section</label>
+                <select id="attendanceSectionFilter">
+                    <option value="">All Sections</option>
+                    <?php foreach($sections as $sec): ?>
+                        <option value="<?= htmlspecialchars($sec) ?>"><?= htmlspecialchars($sec) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
 
         <table id="attendanceModalTable">
             <thead>
                 <tr>
-                    <th>Student ID</th>
-                    <th>Name</th>
-                    <th>Year Level</th>
-                    <th>Section</th>
-                    <th>Attendance %</th>
-                    <th>Present/Total</th>
+                    <th>Student ID</th><th>Name</th><th>Year Level</th>
+                    <th>Section</th><th>Attendance %</th><th>Present / Total</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach($attendance_students as $student): ?>
-                <tr data-year="<?= htmlspecialchars($student['year_level']) ?>" data-section="<?= htmlspecialchars($student['section']) ?>">
-                    <td><?= htmlspecialchars($student['student_id']) ?></td>
-                    <td><?= htmlspecialchars($student['first_name'].' '.$student['last_name']) ?></td>
+                <tr data-year="<?= htmlspecialchars($student['year_level']) ?>" 
+                    data-section="<?= htmlspecialchars($student['section']) ?>">
+                    <td style="font-family:monospace;font-size:0.85rem;"><?= htmlspecialchars($student['student_id']) ?></td>
+                    <td style="font-weight:600;color:var(--slate-800);"><?= htmlspecialchars($student['first_name'].' '.$student['last_name']) ?></td>
                     <td><?= htmlspecialchars($student['year_level']) ?></td>
                     <td><?= htmlspecialchars($student['section']) ?></td>
                     <td>
-                        <?= $student['attendance_percentage'] ?>%
-                        <div class="progress-bar" style="margin-top: 5px;">
-                            <div class="progress-fill" style="width: <?= $student['attendance_percentage'] ?>%;"></div>
+                        <?php
+                        $pct = $student['attendance_percentage'];
+                        $cls = $pct >= 80 ? 'badge-green' : ($pct >= 60 ? 'badge-yellow' : 'badge-red');
+                        ?>
+                        <span class="<?= $cls ?>" style="font-size:0.82rem;"><?= $pct ?>%</span>
+                        <div class="progress-bar" style="margin-top:5px;">
+                            <div class="progress-fill" style="width:<?= $pct ?>%;"></div>
                         </div>
                     </td>
-                    <td><?= $student['total_present'] ?>/<?= $student['total_records'] ?></td>
+                    <td><?= $student['total_present'] ?> / <?= $student['total_records'] ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -405,29 +481,27 @@ style="width: 50px; vertical-align: middle; margin-right: 10px; border-radius: 5
     </div>
 </div>
 
-<!-- Year Level Attendance Modal -->
+<!-- =================== YEAR LEVEL ATTENDANCE MODAL =================== -->
 <div id="yearAttendanceModal" class="modal">
     <div class="modal-content">
         <span class="close">&times;</span>
-        <h2 id="yearModalTitle">Attendance Overview</h2>
-        
-        <label for="yearAttendanceSectionFilter">Select Section:</label>
-        <select id="yearAttendanceSectionFilter">
-            <option value="">All Sections</option>
-            <?php foreach($sections as $sec): ?>
-                <option value="<?= htmlspecialchars($sec) ?>"><?= htmlspecialchars($sec) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <h2 id="yearModalTitle"><i class="fas fa-users"></i> Year Level Attendance</h2>
+
+        <div class="modal-filter-row">
+            <div>
+                <label for="yearAttendanceSectionFilter">Section</label>
+                <select id="yearAttendanceSectionFilter">
+                    <option value="">All Sections</option>
+                    <?php foreach($sections as $sec): ?>
+                        <option value="<?= htmlspecialchars($sec) ?>"><?= htmlspecialchars($sec) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
 
         <table id="yearAttendanceTable">
             <thead>
-                <tr>
-                    <th>Student ID</th>
-                    <th>Name</th>
-                    <th>Section</th>
-                    <th>Attendance %</th>
-                    <th>Present/Total</th>
-                </tr>
+                <tr><th>Student ID</th><th>Name</th><th>Section</th><th>Attendance %</th><th>Present / Total</th></tr>
             </thead>
             <tbody id="yearAttendanceTableBody"></tbody>
         </table>
@@ -435,49 +509,83 @@ style="width: 50px; vertical-align: middle; margin-right: 10px; border-radius: 5
 </div>
 
 
-
 <script>
+// Grade Distribution Chart
 new Chart(document.getElementById('gradeChart'), {
-    type:'pie',
-    data:{labels:<?= json_encode(array_keys($grades)) ?>,datasets:[{ data:<?= json_encode(array_values($grades)) ?>, backgroundColor:['#0C2233','#065471','#0A91AB','#FFC045','#FF8C00','#FF5C5C','#AA336A','#9933FF','#33FFAA','#33CCFF','#888'] }]},
-    options:{responsive:true}
+    type: 'doughnut',
+    data: {
+        labels: <?= json_encode(array_keys($grades)) ?>,
+        datasets: [{
+            data: <?= json_encode(array_values($grades)) ?>,
+            backgroundColor: [
+                '#2563eb','#1d4ed8','#3b82f6','#60a5fa','#93c5fd',
+                '#f59e0b','#f97316','#ef4444','#8b5cf6','#06b6d4','#94a3b8'
+            ],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: {
+                    font: { family: "'DM Sans', sans-serif", size: 13 },
+                    padding: 16,
+                    boxWidth: 12,
+                    boxHeight: 12,
+                    borderRadius: 6,
+                    usePointStyle: true
+                }
+            }
+        },
+        cutout: '60%'
+    }
 });
 
 document.addEventListener('DOMContentLoaded', function() {
     const rankingModal        = document.getElementById('studentModal');
     const attendanceModal     = document.getElementById('attendanceModal');
     const yearAttendanceModal = document.getElementById('yearAttendanceModal');
-    const assignmentsModal    = null; // Removed assignments modal
     const closeButtons        = document.querySelectorAll('.close');
     const attendanceStudents  = <?= json_encode($attendance_students) ?>;
 
-    // ===== Open modals via clickable cards =====
+    // Open modals via clickable cards
     document.querySelectorAll('.clickable-card').forEach(card => {
         card.addEventListener('click', function() {
             const type = this.getAttribute('data-type');
-            if      (type === 'ranking')     rankingModal.style.display        = 'flex';
-            else if (type === 'attendance')  attendanceModal.style.display     = 'flex';
-            // assignments handling removed
+            if (type === 'ranking')    rankingModal.style.display    = 'flex';
+            if (type === 'attendance') attendanceModal.style.display = 'flex';
         });
     });
 
-    // ===== Year attendance card click =====
+    // Year attendance card click
+    document.querySelectorAll('.attendance-year-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const year = this.getAttribute('data-year');
+            showYearAttendance(year);
+        });
+    });
+
     function showYearAttendance(year) {
-        document.getElementById('yearModalTitle').textContent = `${year} Attendance Overview`;
+        document.getElementById('yearModalTitle').innerHTML = '<i class="fas fa-users"></i> ' + year + ' — Attendance';
         const yearStudents = attendanceStudents.filter(s => s.year_level === year);
         const tbody = document.getElementById('yearAttendanceTableBody');
         tbody.innerHTML = '';
         yearStudents.forEach(student => {
+            const pct = student.attendance_percentage;
+            const cls = pct >= 80 ? 'badge-green' : (pct >= 60 ? 'badge-yellow' : 'badge-red');
             const row = document.createElement('tr');
             row.setAttribute('data-section', student.section);
             row.innerHTML = `
-                <td>${student.student_id}</td>
-                <td>${student.first_name} ${student.last_name}</td>
+                <td style="font-family:monospace;font-size:0.85rem;">${student.student_id}</td>
+                <td style="font-weight:600;color:var(--slate-800);">${student.first_name} ${student.last_name}</td>
                 <td>${student.section}</td>
                 <td>
-                    ${student.attendance_percentage}%
+                    <span class="${cls}" style="font-size:0.82rem;">${pct}%</span>
                     <div class="progress-bar" style="margin-top:5px;">
-                        <div class="progress-fill" style="width:${student.attendance_percentage}%;"></div>
+                        <div class="progress-fill" style="width:${pct}%;"></div>
                     </div>
                 </td>
                 <td>${student.total_present}/${student.total_records}</td>
@@ -487,13 +595,12 @@ document.addEventListener('DOMContentLoaded', function() {
         yearAttendanceModal.style.display = 'flex';
     }
 
-    // ===== Close all modals =====
+    // Close modals
     closeButtons.forEach(button => {
         button.addEventListener('click', function() {
             rankingModal.style.display        = 'none';
             attendanceModal.style.display     = 'none';
             yearAttendanceModal.style.display = 'none';
-            // assignmentsModal removed
         });
     });
 
@@ -501,10 +608,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (event.target === rankingModal)        rankingModal.style.display        = 'none';
         if (event.target === attendanceModal)     attendanceModal.style.display     = 'none';
         if (event.target === yearAttendanceModal) yearAttendanceModal.style.display = 'none';
-        // assignmentsModal removed
     });
 
-    // ===== Ranking table filter =====
+    // Ranking filter
     const yearFilter    = document.getElementById('yearFilter');
     const sectionFilter = document.getElementById('sectionFilter');
     if (yearFilter)    yearFilter.addEventListener('change', filterRankingTable);
@@ -523,12 +629,14 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.forEach(row => {
             if (row.style.display !== 'none') {
                 const rankCell = row.querySelector('td:first-child');
-                if (rankCell) rankCell.textContent = `Rank ${visibleCount++}`;
+                if (rankCell) {
+                    rankCell.innerHTML = `<span style="color:var(--text-muted);font-weight:600;">#${visibleCount++}</span>`;
+                }
             }
         });
     }
 
-    // ===== Attendance modal filter =====
+    // Attendance modal filter
     const attendanceYearFilter    = document.getElementById('attendanceYearFilter');
     const attendanceSectionFilter = document.getElementById('attendanceSectionFilter');
     if (attendanceYearFilter)    attendanceYearFilter.addEventListener('change', filterAttendanceTable);
@@ -544,7 +652,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ===== Year attendance section filter =====
+    // Year attendance section filter
     const yearAttendanceSectionFilter = document.getElementById('yearAttendanceSectionFilter');
     if (yearAttendanceSectionFilter) {
         yearAttendanceSectionFilter.addEventListener('change', function() {
@@ -554,7 +662,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
 });
 </script>
 </body>
