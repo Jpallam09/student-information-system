@@ -123,39 +123,6 @@ if (isset($_SESSION['student_id'])) {
     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
     <link rel="stylesheet" href="<?php echo asset('css/studentportal.css'); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        /* ── Notification badge ── */
-        .notif-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #e53e3e;
-            color: #fff;
-            font-size: 10px;
-            font-weight: 700;
-            min-width: 18px;
-            height: 18px;
-            padding: 0 5px;
-            border-radius: 9px;
-            margin-left: auto;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-        /* Make sidebar links flex so badge sits on the right */
-        .menu a {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .menu a .fa,
-        .menu a .fas {
-            width: 16px;
-            flex-shrink: 0;
-        }
-        .menu a span.link-label {
-            flex: 1;
-        }
-    </style>
 </head>
 <body>
 
