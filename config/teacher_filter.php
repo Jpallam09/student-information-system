@@ -123,12 +123,16 @@ function getTeacherDropdownYears() {
     return $years;
 }
 
-// Dropdown sections
+// Dropdown sections for teachers (assigned or allow "All")
 function getTeacherDropdownSections() {
     $admin_types = ['Seeder', 'Administrator'];
     $is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
-    if ($is_admin || empty($sections = getTeacherSections())) {
-        return [];
+    if ($is_admin) {
+        return ['A','B','C','D','E'];
+    }
+    $sections = getTeacherSections();
+    if (empty($sections)) {
+        return [''];  // Allow "All" selection even if no specific sections assigned
     }
     return $sections;
 }

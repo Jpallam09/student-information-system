@@ -220,13 +220,13 @@ $teacher_dropdown_years = getTeacherDropdownYears();
     <div class="filter-group">
         <form method="GET" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;width:100%;">
             <select name="year_level" onchange="this.form.submit()">
-                <?php if ($is_admin): ?><option value="">All Year Levels</option><?php endif; ?>
-                <?php foreach ($teacher_dropdown_years as $yl): ?>
-                    <option value="<?= htmlspecialchars($yl) ?>" <?= $year_level==$yl?'selected':'' ?>><?= htmlspecialchars($yl) ?></option>
-                <?php endforeach; ?>
+                <option value="">All Year Levels</option>
+                    <?php foreach ($teacher_dropdown_years as $yl): ?>
+                        <option value="<?= htmlspecialchars($yl) ?>" <?= $year_level==$yl?'selected':'' ?>><?= htmlspecialchars($yl) ?></option>
+                    <?php endforeach; ?>
             </select>
             <select name="section_filter" onchange="this.form.submit()">
-                <?php if ($is_admin): ?><option value="">All Sections</option><?php endif; ?>
+                <option value="">All Sections</option>
                 <?php
                 $dropdown_sections = $is_admin ? ['A','B','C','D','E'] : getTeacherDropdownSections();
                 foreach ($dropdown_sections as $sec):

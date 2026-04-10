@@ -1,8 +1,10 @@
-# Task: Fix admin add teacher back button redirect to teachers_login.php instead of teachers_list.php
+# TODO: Add search bar to grades.php like students.php
 
-## Steps:
-- [x] 1. Edit Accesspage/teachers_register.php: add admin session check, dynamic back href, admin success redirect to teachers_list.php
-- [x] 2. Test the flow
-- [ ] 3. Complete task
+## Plan Breakdown
+- [ ] Step 1: Create TODO.md (current)
+- [ ] Step 2: Edit teachersportal/grades.php to add PHP $search logic and query filter
+- [ ] Step 3: Verify changes with attempt_completion
 
-Progress: Fixes applied and syntax corrected. teachers_list.php can handle ?msg=teacher_added optionally.
+✅ Step 1 complete.
+✅ Step 2 complete: Edited teachersportal/grades.php with search bar (UI + PHP logic matching students.php).
+

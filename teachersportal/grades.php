@@ -57,6 +57,7 @@ $stmt->close();
 // ================== FILTER VARIABLES ==================
 $selected_year    = $_GET['year_level'] ?? '';
 $selected_section = $_GET['section'] ?? '';
+$search = trim($_GET['search'] ?? '');
 
 // ================== FETCH AVAILABLE SECTIONS ==================
 $section_sql_base = "SELECT DISTINCT section FROM students WHERE course=? $teacher_year_filter";
@@ -160,6 +161,12 @@ if (!$is_admin) {
 
 if($selected_year)    { $students_base_sql .= " AND year_level=?"; $params_stu[] = $selected_year;    $types_stu .= "s"; }
 if($selected_section) { $students_base_sql .= " AND section=?";    $params_stu[] = $selected_section; $types_stu .= "s"; }
+if ($search != '') {
+    $students_base_sql .= " AND (student_id LIKE ? OR first_name LIKE ? OR last_name LIKE ? OR CONCAT(first_name,' ',last_name) LIKE ? OR section LIKE ?)";
+    $like = "%$search%";
+    $params_stu = array_merge($params_stu, [$like, $like, $like, $like, $like]);
+    $types_stu .= "sssss";
+}
 $students_base_sql .= " ORDER BY section ASC, last_name ASC";
 
 $stmt_stu = $conn->prepare($students_base_sql);
@@ -231,7 +238,15 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
                     <option value="<?= $sec ?>" <?= ($selected_section==$sec)?'selected':'' ?>><?= $sec ?></option>
                 <?php endforeach; ?>
             </select>
-            <?php if($selected_year || $selected_section): ?>
+
+            <div class="search-input-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" name="search" placeholder="Search name, ID, or section…" value="<?= htmlspecialchars($search) ?>">
+            </div>
+
+            <button type="submit"><i class="fas fa-search"></i> Search</button>
+
+            <?php if($selected_year || $selected_section || $search): ?>
                 <a href="grades.php" class="refresh-btn" title="Clear Filters">
                     <i class="fas fa-rotate-right"></i> Clear
                 </a>
