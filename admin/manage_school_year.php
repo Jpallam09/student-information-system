@@ -12,7 +12,7 @@ $success_msg = $error_msg = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // DEBUG: Log full POST data
-    file_put_contents('delete_log.txt', date('Y-m-d H:i:s') . " - POST DATA: " . json_encode($_POST) . "\n", FILE_APPEND | LOCK_EX);
+    file_put_contents('delete_log.txt', date('Y-m-d H:i:s') . " - POST DATA: " . json_encode($_POST) . "", FILE_APPEND | LOCK_EX);
     
     if (isset($_POST['delete_year']) && !empty($_POST['delete_year'])) {
         $year_id = (int)$_POST['delete_year'];
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $delete = mysqli_query($conn, "DELETE FROM school_years WHERE id = $year_id");
             $affected = mysqli_affected_rows($conn);
-            file_put_contents('delete_log.txt', date('Y-m-d H:i:s') . " - Delete attempt id: $year_id, affected: $affected, error: " . mysqli_error($conn) . "\n", FILE_APPEND | LOCK_EX);
+            file_put_contents('delete_log.txt', date('Y-m-d H:i:s') . " - Delete attempt id: $year_id, affected: $affected, error: " . mysqli_error($conn) . "", FILE_APPEND | LOCK_EX);
             if ($delete && $affected > 0) {
                 $success_msg = 'School year deleted successfully.';
             } else {
@@ -67,117 +67,142 @@ while ($row = mysqli_fetch_assoc($result)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage School Year | Admin</title>
     <link rel="icon" href="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>">
-<link rel="stylesheet" href="<?php echo asset('css/teacherportal.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset('css/teacherportal.css'); ?>">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
 <?php include PROJECT_ROOT . '/teachersportal/sidebar.php'; ?>
 
 <div class="content">
+    <!-- Header -->
     <div class="announcement-header">
-        <h1><i class="fas fa-calendar-alt"></i> Manage School Year & Semester</h1>
+        <div class="header-left">
+            <div>
+                <h1><i class="fas fa-calendar-alt"></i> Manage School Year</h1>
+                <p class="header-subtitle">Control active semesters and academic calendar</p>
+            </div>
+        </div>
     </div>
 
+    <!-- Messages -->
     <?php if ($success_msg): ?>
-        <div class="message success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success_msg) ?></div>
+        <div class="alert alert-success">
+    <?= htmlspecialchars($success_msg) ?>
+        </div>
     <?php endif; ?>
     <?php if ($error_msg): ?>
-        <div class="message error"><i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($error_msg) ?></div>
+        <div class="alert alert-error">
+    <?= htmlspecialchars($error_msg) ?>
+        </div>
     <?php endif; ?>
 
-    <!-- Current Active -->
+    <!-- Current Active School Year Card -->
     <?php 
     $active = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM school_years WHERE is_active=1"));
     ?>
-    <div class="card active-year-card" style="border-left: 5px solid var(--accent-emerald); box-shadow: var(--shadow-lg);">
-        <div style="background: linear-gradient(135deg, var(--accent-emerald), #059669); padding: 12px 20px; margin: -24px -24px 20px -24px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
-            <h3 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;"><i class="fas fa-crown"></i> Currently Active</h3>
+    <div class="card modern-active-card">
+        <div class="card-header emerald-gradient">
+            <div class="status-indicator"></div>
+            <h3><i class="fas fa-crown"></i> Currently Active</h3>
         </div>
-        <?php if ($active): ?>
-            <div class="active-display">
-                <i class="fas fa-check-circle" style="color: var(--accent-emerald); margin-right: 8px;"></i>
-                <strong><?= htmlspecialchars($active['school_year'] . ' ' . $active['semester'] . ' Semester') ?></strong>
-            </div>
-        <?php else: ?>
-            <p>No active school year set. <a href="#add-form">Add one now</a></p>
-        <?php endif; ?>
+        <div class="card-body">
+            <?php if ($active): ?>
+                <div class="active-display">
+                    <i class="fas fa-check-circle" style="color: var(--accent-emerald); margin-right: 12px; font-size: 1.5rem;"></i>
+                    <strong><?= htmlspecialchars($active['school_year'] . ' - ' . $active['semester'] . ' Semester') ?></strong>
+                </div>
+            <?php else: ?>
+                <p style="padding: 20px; text-align: center; color: var(--text-muted);">
+                    <i class="fas fa-info-circle"></i> No active school year set. 
+                    <a href="#add-form" style="color: var(--primary-blue);">Add one now</a>
+                </p>
+            <?php endif; ?>
+        </div>
     </div>
 
-    <!-- List All Years FORM -->
+    <!-- All School Years Table -->
     <form id="yearsForm" method="POST">
-    <div class="card" style="box-shadow: var(--shadow-md);">
-        <div style="background: linear-gradient(135deg, var(--primary-blue), var(--accent-violet)); padding: 16px 24px; margin: -24px -24px 20px -24px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
-            <h3 style="color: white; margin: 0; display: flex; align-items: center; gap: 10px;"><i class="fas fa-list"></i> All School Years</h3>
+        <div class="section-box">
+            <h2><i class="fas fa-list"></i> All School Years</h2>
+            <div class="table-container modern-table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable">School Year</th>
+                            <th class="sortable">Semester</th>
+                            <th class="sortable">Status</th>
+                            <th>Action</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($school_years as $year): ?>
+                        <tr data-id="<?= $year['id'] ?>">
+                            <td data-label="School Year"><?= htmlspecialchars($year['school_year']) ?></td>
+                            <td data-label="Semester"><?= $year['semester'] ?> Semester</td>
+                            <td data-label="Status">
+                                <?= $year['is_active'] ? '<span class="badge-active"><i class="fas fa-check-circle"></i> Active</span>' : '<span class="badge-inactive"><i class="fas fa-circle"></i> Inactive</span>' ?>
+                            </td>
+                            <td data-label="Action">
+                                <button type="submit" name="set_active" value="<?= $year['id'] ?>" class="btn <?= $year['is_active'] ? 'btn-success' : 'btn-primary' ?>" title="<?= $year['is_active'] ? 'Currently Active' : 'Make Active' ?>">
+                                    <i class="fas fa-<?= $year['is_active'] ? 'check-circle' : 'play' ?>"></i>
+                                    <?= $year['is_active'] ? 'Active' : 'Set Active' ?>
+                                </button>
+                            </td>
+                            <td data-label="Delete">
+                                <button type="button" class="btn btn-danger delete-schedule" data-id="<?= $year['id'] ?>" <?= $year['is_active'] ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : '' ?>>
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Year</th>
-                        <th>Semester</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                        <th>Delete</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($school_years as $year): ?>
-                    <tr data-id="<?= $year['id'] ?>">
-                        <td><?= htmlspecialchars($year['school_year']) ?></td>
-                        <td><?= $year['semester'] ?> Sem</td>
-                        <td><?= $year['is_active'] ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>' ?></td>
-                        <td>
-                            <button type="submit" name="set_active" value="<?= $year['id'] ?>" class="btn <?= $year['is_active'] ? 'btn-success' : 'btn-primary' ?>" title="<?= $year['is_active'] ? 'Currently Active' : 'Make Active' ?>">
-                                <i class="fas fa-<?= $year['is_active'] ? 'check-circle' : 'play' ?>"></i>
-                                <?= $year['is_active'] ? 'Active' : 'Set Active' ?>
-                            </button>
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-danger delete-schedule" data-id="<?= $year['id'] ?>" <?= $year['is_active'] ? 'disabled title="Cannot delete active year"' : '' ?>>
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
     </form>
 
-    <!-- Add New Year Form -->
-    <div class="section-box" id="add-form" style="box-shadow: var(--shadow-lg); border: 1px solid var(--border-light);">
-        <div style="background: linear-gradient(135deg, var(--accent-emerald), #10b981); padding: 20px 24px; margin: -24px -24px 24px -24px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;">
-            <h2 style="color: white; margin: 0; display: flex; align-items: center; gap: 12px;"><i class="fas fa-plus"></i> Add New School Year</h2>
-        </div>
+    <!-- Add New School Year Form -->
+    <div class="section-box" id="add-form">
+        <h2><i class="fas fa-plus-circle"></i> Add New School Year</h2>
         <form method="POST">
             <div class="form-row">
                 <div class="form-group">
-                    <label>School Year (e.g., 1978-1979)</label>
-                    <input type="text" name="school_year" pattern="^\d{4}-\d{4}$" maxlength="9" oninput="this.value = this.value.replace(/[^0-9-]/g, '')" required placeholder="1978-1979" class="input-field">
+                    <label><i class="fas fa-calendar"></i> School Year</label>
+                    <input type="text" name="school_year" pattern="^\d{4}-\d{4}$" maxlength="9" 
+                           oninput="this.value = this.value.replace(/[^0-9-]/g, '')" 
+                           required placeholder="e.g., 2024-2025" class="input-field">
+                    <small style="color: var(--text-muted);">Format: YYYY-YYYY (e.g., 2024-2025)</small>
                 </div>
                 <div class="form-group">
-                    <label>Semester</label>
+                    <label><i class="fas fa-layer-group"></i> Semester</label>
                     <select name="semester" class="input-field" required>
                         <option value="1st">1st Semester</option>
                         <option value="2nd">2nd Semester</option>
                     </select>
                 </div>
             </div>
-            <button type="submit" name="add_year" class="btn-primary">
-                <i class="fas fa-plus"></i> Add School Year
-            </button>
+            <div class="action-buttons">
+                <button type="submit" name="add_year" class="btn-add">
+                    <i class="fas fa-save"></i> Add School Year
+                </button>
+                <button type="reset" class="btn-cancel">
+                    Undo
+                </button>
+            </div>
         </form>
     </div>
+</div>
 
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal">
     <div class="modal-content small">
-        <span class="close-delete-modal close">&times;</span>
-        <h2><i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i> Confirm Delete</h2>
-        <p>Are you sure you want to delete this school year and semester? This action cannot be undone.</p>
+        <span class="close-modal">&times;</span>
+        <h2><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h2>
+        <p>Are you sure you want to delete this school year and semester?</p>
+        <p style="color: var(--accent-rose); font-size: 0.9rem;"><strong>This action cannot be undone.</strong></p>
         <div class="modal-actions">
-            <button id="cancelDeleteBtn" class="btn-outline">
+            <button id="cancelDeleteBtn" class="btn-cancel">
                 <i class="fas fa-times"></i> Cancel
             </button>
             <button id="confirmDeleteBtn" class="btn-danger">
@@ -186,16 +211,66 @@ while ($row = mysqli_fetch_assoc($result)) {
         </div>
     </div>
 </div>
-</div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(){
-    var deleteModal = document.getElementById("deleteModal");
-    let targetRow = null;
-    let deleteId = null;
+document.addEventListener("DOMContentLoaded", function() {
+    // Table search functionality
+    const searchInput = document.getElementById('yearSearch');
+    const table = document.querySelector('.modern-table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    let sortDirection = {};
 
-    // Auto-hide messages after 5 seconds with slide out
-    const messages = document.querySelectorAll('.message');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        });
+    }
+
+    // Sortable headers
+    table.querySelectorAll('th.sortable').forEach((th, index) => {
+        th.addEventListener('click', () => {
+            const dir = sortDirection[index] === 'asc' ? 'desc' : 'asc';
+            sortDirection[index] = dir;
+
+            // Remove previous sort classes
+            table.querySelectorAll('th').forEach(h => {
+                h.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            th.classList.add(`sort-${dir}`);
+
+            rows.sort((a, b) => {
+                let aVal = a.cells[index].textContent.trim();
+                let bVal = b.cells[index].textContent.trim();
+
+                if (index === 2) { // Status column
+                    aVal = aVal.includes('Active') ? 1 : 0;
+                    bVal = bVal.includes('Active') ? 1 : 0;
+                    if (dir === 'asc') {
+                        return aVal - bVal;
+                    } else {
+                        return bVal - aVal;
+                    }
+                }
+
+                if (dir === 'asc') {
+                    return aVal.localeCompare(bVal);
+                } else {
+                    return bVal.localeCompare(aVal);
+                }
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+
+    // Auto-hide messages after 5 seconds
+    const messages = document.querySelectorAll('.alert');
     messages.forEach(msg => {
         setTimeout(() => {
             msg.style.animation = 'slideOutMessage 0.4s ease-out forwards';
@@ -203,49 +278,68 @@ document.addEventListener("DOMContentLoaded", function(){
         }, 5000);
     });
 
+    // Close alert messages with X button
+    document.querySelectorAll('.alert-close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', function() {
+            this.parentElement.style.animation = 'slideOutMessage 0.4s ease-out forwards';
+            setTimeout(() => this.parentElement.remove(), 400);
+        });
+    });
+
+    // Delete modal functionality
+    let deleteModal = document.getElementById("deleteModal");
+    let deleteId = null;
+
     // Open delete modal
     document.querySelectorAll(".delete-schedule").forEach(function(btn){
         btn.addEventListener("click", function(e){
             e.preventDefault();
+            if (this.disabled) return;
             deleteId = this.dataset.id;
-            targetRow = this.closest('tr');
             deleteModal.style.display = "flex";
         });
     });
 
-    // Close modals
-    document.querySelectorAll(".close").forEach(function(span){
-        span.addEventListener("click", function(){ 
-            deleteModal.style.display = "none";
-        });
-    });
-
-    document.getElementById('cancelDeleteBtn').addEventListener("click", function(){
+    // Close modal functions
+    function closeModal() {
         deleteModal.style.display = "none";
+        deleteId = null;
+    }
+
+    document.querySelectorAll(".close-modal, #cancelDeleteBtn").forEach(function(el){
+        el.addEventListener("click", closeModal);
     });
 
-    // Confirm delete - SUBMIT FORM
+    // Confirm delete - submit form
     document.getElementById("confirmDeleteBtn").addEventListener("click", function(){
-        if (deleteId && targetRow) {
-            // Create hidden input for delete_year
+        if (deleteId) {
             let input = document.createElement('input');
             input.type = 'hidden';
             input.name = 'delete_year';
             input.value = deleteId;
             document.getElementById('yearsForm').appendChild(input);
-            
-            // Submit form
             document.getElementById('yearsForm').submit();
         }
     });
 
-    // Close if click outside
+    // Close modal when clicking outside
     window.onclick = function(event) {
-        if (event.target == deleteModal) deleteModal.style.display = "none";
-    }
+        if (event.target == deleteModal) {
+            closeModal();
+        }
+    };
+
+    // Add animation for slide out
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideOutMessage {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
 });
 </script>
 
 </body>
 </html>
-

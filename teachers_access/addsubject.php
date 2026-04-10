@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $year_level = trim($_POST['year_level']);
     $section = strtoupper(trim($_POST['section']));
     $description = trim($_POST['description']);
-$room = strtoupper(trim($_POST['room']));
+    $room = strtoupper(trim($_POST['room']));
     $day = trim($_POST['day']);
     $time_start = $_POST['time_start'];
     $time_end = $_POST['time_end'];
@@ -118,7 +118,9 @@ $room = strtoupper(trim($_POST['room']));
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Subject | Teacher Portal</title>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="<?= asset('css/teachersaccess.css') ?>">
 </head>
@@ -126,13 +128,16 @@ $room = strtoupper(trim($_POST['room']));
 
 <div class="container">
 
+    <!-- RIGHT PANEL — Dark brand panel -->
+    <div class="right-panel">
+        <a href="<?= BASE_URL ?>teachersportal/subjects.php" class="back-arrow" title="Back">↩</a>
+        <h1>Subject<br>Management</h1>
+    </div>
+
+    <!-- LEFT PANEL — Form panel -->
     <div class="left-panel">
-
-        <a href="<?= BASE_URL ?>teachersportal/subjects.php" class="back-arrow">↩</a>
-
         <div class="icon"><i class="fas fa-book-open"></i></div>
         <h2>Add Subject</h2>
-
         <p>Create a new subject for: <strong><?= htmlspecialchars($course) ?></strong></p>
 
         <?php if (!empty($message)): ?>
@@ -145,24 +150,20 @@ $room = strtoupper(trim($_POST['room']));
         <form method="POST" class="register-form">
 
             <fieldset>
-                <legend>Subject Information</legend>
+                <legend><i class="fas fa-book-open"></i> Subject Information</legend>
 
                 <div class="form-row">
-
                     <div>
                         <label>Subject Code</label>
                         <input type="text" name="code" required oninput="this.value=this.value.toUpperCase()">
                     </div>
-
                     <div>
                         <label>Subject Name</label>
                         <input type="text" name="subject_name" required oninput="this.value=this.value.toUpperCase()">
                     </div>
-
                 </div>
 
                 <div class="form-row">
-
                     <div>
                         <label>Year Level</label>
                         <select name="year_level" id="year_level" required>
@@ -173,54 +174,38 @@ $room = strtoupper(trim($_POST['room']));
                             <option value="4th Year">4th Year</option>
                         </select>
                     </div>
-
                     <div>
                         <label>Section</label>
                         <input type="text" name="section" id="section" maxlength="1" value="A" required
                                oninput="this.value=this.value.toUpperCase().replace(/[^A-E]/g,'');">
                     </div>
-
                 </div>
 
                 <div class="form-row">
-
                     <div>
-
                         <label>Subject Type</label>
-
                         <select name="subject_type" required>
-
                             <option value="">Select Type</option>
-
                             <option value="Major">Major Subject</option>
-
                             <option value="Minor">Minor Subject</option>
-
                         </select>
-
                     </div>
-
-                </div>
-
-                <div class="form-row">
-
-                    <div style="grid-column: span 2;">
-
-                        <label>Description</label>
-
-                        <textarea name="description" rows="3"></textarea>
-
-                    </div>
-
-                </div>
-
-                <div class="form-row">
-
                     <div>
                         <label>Room</label>
                         <input type="text" name="room" required oninput="this.value=this.value.toUpperCase()">
                     </div>
+                </div>
 
+                <div>
+                    <label>Description</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="fas fa-chalkboard-teacher"></i> Schedule & Instructor</legend>
+
+                <div class="form-row">
                     <div>
                         <label>Instructor</label>
                         <select name="instructor" id="instructor" required>
@@ -232,11 +217,6 @@ $room = strtoupper(trim($_POST['room']));
                             <?php endforeach; ?>
                         </select>
                     </div>
-
-                </div>
-
-                <div class="form-row">
-
                     <div>
                         <label>Day</label>
                         <select name="day" required>
@@ -248,43 +228,32 @@ $room = strtoupper(trim($_POST['room']));
                             <option>Friday</option>
                         </select>
                     </div>
-
                 </div>
 
                 <div class="form-row">
-
                     <div>
                         <label>Start Time</label>
                         <input type="time" name="time_start" required>
                     </div>
-
                     <div>
                         <label>End Time</label>
                         <input type="time" name="time_end" required>
                     </div>
-
                 </div>
-
             </fieldset>
 
-            <div style="display:flex; gap:12px; margin-top:20px;">
+            <div style="display:flex; gap:12px; margin-top:8px;">
                 <button type="submit" class="btn register-btn" style="flex:1;">
                     <i class="fas fa-plus"></i> Add Subject
                 </button>
-
                 <a href="<?= BASE_URL ?>teachersportal/subjects.php"
                    class="btn"
-                   style="flex:1; background: var(--slate-500); color:white; text-decoration:none;">
+                   style="flex:1; background: var(--slate-500); color:white; text-decoration:none; margin-top:8px;">
                     <i class="fas fa-times"></i> Cancel
                 </a>
             </div>
 
         </form>
-
-    </div>
-
-    <div class="right-panel">
-        <h1>Subject<br>Management</h1>
     </div>
 
 </div>

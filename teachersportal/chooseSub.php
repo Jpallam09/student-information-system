@@ -36,32 +36,7 @@ if(isset($_GET['course']) && in_array($_GET['course'], $allowed_courses)){
 </head>
 <body>
 <div class="container">
-    <div class="left-panel">
-        <a href="<?= BASE_URL ?>Accesspage/teacher_login.php" class="back-arrow">↩</a>
-       <div class="logo-wrap">
-           <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>" alt="School Logo">
-       </div>
-        <div class="panel-divider"></div>
-        <p class="portal-label">Select Your Program</p>
-        <div class="btn-group">
-            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BSIT" class="btn btn--primary">
-                <span class="btn__label">BSIT</span>
-                <span class="btn__arrow">→</span>
-            </a>
-            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BSED" class="btn btn--primary">
-                <span class="btn__label">BSED</span>
-                <span class="btn__arrow">→</span>
-            </a>
-            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BAT" class="btn btn--primary">
-                <span class="btn__label">BAT</span>
-                <span class="btn__arrow">→</span>
-            </a>
-            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BTVTED" class="btn btn--primary">
-                <span class="btn__label">BTVTED</span>
-                <span class="btn__arrow">→</span>
-            </a>
-        </div>
-    </div>
+    <a href="<?= BASE_URL ?>Accesspage/teacher_login.php" class="back-arrow">↩</a>
     <div class="right-panel">
         <div class="right-content">
             <div class="eyebrow">
@@ -90,6 +65,31 @@ if(isset($_GET['course']) && in_array($_GET['course'], $allowed_courses)){
                     Secure Setup
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="left-panel">
+       <div class="logo-wrap">
+           <img src="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>" alt="School Logo">
+       </div>
+        <div class="panel-divider"></div>
+        <p class="portal-label">Select Your Program</p>
+        <div class="btn-group">
+            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BSIT" class="btn btn--primary">
+                <span class="btn__label">BSIT</span>
+                <span class="btn__arrow">→</span>
+            </a>
+            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BSED" class="btn btn--primary">
+                <span class="btn__label">BSED</span>
+                <span class="btn__arrow">→</span>
+            </a>
+            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BAT" class="btn btn--primary">
+                <span class="btn__label">BAT</span>
+                <span class="btn__arrow">→</span>
+            </a>
+            <a href="<?= BASE_URL ?>teachersportal/chooseSub.php?course=BTVTED" class="btn btn--primary">
+                <span class="btn__label">BTVTED</span>
+                <span class="btn__arrow">→</span>
+            </a>
         </div>
     </div>
 </div>

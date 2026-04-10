@@ -16,47 +16,13 @@
 
 <div class="container">
 
-    <!-- LEFT PANEL -->
+    <!-- LEFT PANEL — now WHITE with title/features -->
     <div class="left-panel">
 
-        <!-- DECORATIVE CIRCLES -->
-        <div class="deco-circle deco-circle--top"></div>
-        <div class="deco-circle deco-circle--bottom"></div>
-
-        <!-- SCHOOL LOGO -->
-        <div class="logo-wrap">
-            <img src="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>"
-                 alt="School Logo">
-        </div>
-
-        <!-- DIVIDER -->
-        <div class="panel-divider"></div>
-
-        <!-- PORTAL LABEL -->
-        <p class="portal-label">Select Your Portal</p>
-
-        <!-- BUTTONS -->
-        <div class="btn-group">
-            <a href="<?php echo BASE_URL; ?>Accesspage/student_login.php" class="btn btn--student">
-                <span class="btn__label">Student</span>
-                <span class="btn__arrow">→</span>
-            </a>
-
-            <a href="<?php echo BASE_URL; ?>Accesspage/teacher_login.php" class="btn btn--teacher">
-                <span class="btn__label">Teacher</span>
-                <span class="btn__arrow">→</span>
-            </a>
-        </div>
-
-    </div>
-
-    <!-- RIGHT PANEL -->
-    <div class="right-panel">
-
         <!-- BACKGROUND ACCENT -->
-        <div class="right-accent"></div>
+        <div class="left-accent"></div>
 
-        <div class="right-content">
+        <div class="left-content">
 
             <!-- EYEBROW -->
             <div class="eyebrow">
@@ -93,6 +59,40 @@
                 </div>
             </div>
 
+        </div>
+
+    </div>
+
+    <!-- RIGHT PANEL — now DARK with logo/buttons -->
+    <div class="right-panel">
+
+        <!-- DECORATIVE CIRCLES -->
+        <div class="deco-circle deco-circle--top"></div>
+        <div class="deco-circle deco-circle--bottom"></div>
+
+        <!-- SCHOOL LOGO -->
+        <div class="logo-wrap">
+            <img src="<?php echo asset('images/622685015_925666030131412_6886851389087569993_n.jpg'); ?>"
+                 alt="School Logo">
+        </div>
+
+        <!-- DIVIDER -->
+        <div class="panel-divider"></div>
+
+        <!-- PORTAL LABEL -->
+        <p class="portal-label">Select Your Portal</p>
+
+        <!-- BUTTONS -->
+        <div class="btn-group">
+            <a href="<?php echo BASE_URL; ?>Accesspage/student_login.php" class="btn btn--student">
+                <span class="btn__label">Student</span>
+                <span class="btn__arrow">→</span>
+            </a>
+
+            <a href="<?php echo BASE_URL; ?>Accesspage/teacher_login.php" class="btn btn--teacher">
+                <span class="btn__label">Teacher</span>
+                <span class="btn__arrow">→</span>
+            </a>
         </div>
 
     </div>

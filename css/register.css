@@ -488,6 +488,67 @@ fieldset textarea {
     margin-bottom: 12px;
 }
 
+fieldset .checkbox-group {
+    margin-top: 15px;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 8px 0;
+    transition: var(--transition-base);
+}
+
+.checkbox-group label:hover {
+    color: var(--primary-blue);
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    accent-color: var(--primary-blue);
+    transform: scale(1.2);
+}
+
+/* Messages */
+.message {
+    padding: 12px 16px;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+.message.success {
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 4px solid var(--accent-emerald);
+    color: var(--accent-emerald);
+}
+
+.message.error {
+    background: rgba(244, 63, 94, 0.1);
+    border-left: 4px solid var(--accent-rose);
+    color: var(--accent-rose);
+}
+
+.message.info {
+    background: rgba(59, 130, 246, 0.1);
+    border-left: 4px solid var(--primary-blue);
+    color: var(--primary-blue);
+}
+
+/* Legend icon support */
+legend i {
+    margin-right: 6px;
+    color: var(--primary-navy);
+}
+
 /* Add spacing between sections */
 fieldset:last-of-type {
     margin-bottom: 10px;
@@ -500,6 +561,7 @@ textarea:required {
     border-left-width: 4px;
     border-left-color: var(--primary-navy);
 }
+
 
 /* =========================
    ANIMATIONS

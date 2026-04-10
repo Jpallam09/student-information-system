@@ -44,3 +44,4 @@
 2026-04-09 07:23:08 - POST DATA: {"set_active":"27"}
 2026-04-09 07:55:17 - POST DATA: {"set_active":"26"}
 2026-04-09 10:41:22 - POST DATA: {"set_active":"27"}
+2026-04-10 04:29:47 - POST DATA: {"set_active":"26"}2026-04-10 04:29:51 - POST DATA: {"set_active":"27"}2026-04-10 04:30:08 - POST DATA: {"school_year":"2028-2029","semester":"1st","add_year":""}2026-04-10 04:31:03 - POST DATA: {"delete_year":"30"}2026-04-10 04:31:03 - Delete attempt id: 30, affected: 1, error: 2026-04-10 04:33:25 - POST DATA: {"delete_year":"30"}2026-04-10 04:33:25 - Delete attempt id: 30, affected: 0, error: 2026-04-10 04:33:25 - POST DATA: {"set_active":"26"}2026-04-10 04:33:30 - POST DATA: {"set_active":"27"}

@@ -6,9 +6,10 @@ if (!isset($_SESSION['teacher_id'])) {
 }
 require_once dirname(__DIR__) . '/config/paths.php';
 require_once PROJECT_ROOT . '/config/database.php';
-$task_type = 'homework';  // Matches enum: 'homework'
+
+$task_type = 'homework';
 $task_title = 'Homework Submission';
-$upload_dir = TASK_UPLOADS_DIR; 
+$upload_dir = TASK_UPLOADS_DIR;
 $subject_id = intval($_GET['subject_id'] ?? 0);
 $teacher_id = $_SESSION['teacher_id'];
 
@@ -16,7 +17,6 @@ if ($subject_id <= 0) {
     die("Invalid subject ID.");
 }
 
-// Validate that the subject belongs to the teacher's course
 $teacher_course = $_SESSION['teacher_course'] ?? '';
 if (empty($teacher_course)) {
     die("Teacher course not set.");
@@ -32,7 +32,6 @@ if (mysqli_num_rows($subject_result) == 0) {
 $subject_row = mysqli_fetch_assoc($subject_result);
 $subject_course_id = $subject_row['course_id'];
 
-// Get the course name
 $course_query = mysqli_prepare($conn, "SELECT course_name FROM courses WHERE id = ?");
 mysqli_stmt_bind_param($course_query, 'i', $subject_course_id);
 mysqli_stmt_execute($course_query);
@@ -55,20 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $original_filename = null;
     $error = null;
 
-    // Create upload dir if not exists
     if (!is_dir($upload_dir)) {
         mkdir($upload_dir, 0777, true);
     }
 
-    // Handle optional file upload
     if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
         $allowed_types = [
             'application/pdf',
             'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'image/jpeg',
-            'image/png',
-            'image/gif'
+            'image/jpeg', 'image/png', 'image/gif'
         ];
         if (in_array($_FILES['file']['type'], $allowed_types) && $_FILES['file']['size'] <= 10 * 1024 * 1024) {
             $file_ext = pathinfo($_FILES['file']['name'], PATHINFO_EXTENSION);
@@ -85,22 +80,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($error) && !empty($title) && !empty($description)) {
         $query = "INSERT INTO tasks 
                     (task_type, subject_id, teacher_id, title, description, attachment, original_filename, due_date, created_at) 
-                  VALUES 
-                    (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())";
         $stmt = mysqli_prepare($conn, $query);
         mysqli_stmt_bind_param($stmt, 'siisssss',
-            $task_type,
-            $subject_id,
-            $teacher_id,
-            $title,
-            $description,
-            $attachment,
-            $original_filename,
-            $due_date
+            $task_type, $subject_id, $teacher_id, $title,
+            $description, $attachment, $original_filename, $due_date
         );
         if (mysqli_stmt_execute($stmt)) {
             $success = 'Homework created successfully!';
-           header('Refresh: 2; url=' . BASE_URL . 'teachersportal/tasks.php');
+            header('Refresh: 2; url=' . BASE_URL . 'teachersportal/tasks.php');
         } else {
             $error = 'Database insert failed: ' . mysqli_error($conn);
         }
@@ -110,7 +98,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch subject name
 $subject_name = 'Selected Subject';
 if ($subject_id > 0) {
     $q = "SELECT subject_name FROM subjects WHERE id = ?";
@@ -131,74 +118,77 @@ if ($subject_id > 0) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $task_title ?> - <?= htmlspecialchars($subject_name) ?></title>
-    <link rel="stylesheet" href="<?= asset('css/teachersaccess.css') ?>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="<?= asset('css/teachersaccess.css') ?>">
 </head>
 <body>
-    <div class="container">
-        <div class="left-panel">
-            <a href="<?= BASE_URL ?>teachersportal/tasks.php" class="back-arrow">↩</a>
 
-            <div class="icon"><i class="fas fa-book"></i></div>
-            <h2><?= $task_title ?></h2>
-            <p>Create and submit homework for <strong><?= htmlspecialchars($subject_name) ?></strong></p>
+<div class="container">
 
-            <?php if (isset($success)): ?>
-                <div class="message message-success">
-                    <i class="fas fa-check-circle"></i>
-                    <?= htmlspecialchars($success) ?>
-                </div>
-            <?php endif; ?>
-            <?php if (isset($error)): ?>
-                <div class="message message-error">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <?= htmlspecialchars($error) ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="POST" enctype="multipart/form-data" class="register-form">
-                <fieldset>
-                    <legend><i class="fas fa-book"></i> Homework Details</legend>
-
-                    <label for="title">Title</label>
-                    <input type="text" id="title" name="title" value="<?= htmlspecialchars($_POST['title'] ?? '') ?>" required>
-
-                    <label for="description">Description</label>
-                    <textarea id="description" name="description" required><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
-
-                    <label for="file">Attachment File</label>
-                    <input type="file" id="file" name="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
-                    <small style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 4px;">Max 10MB. PDF, Word, Images. Optional.</small>
-                </fieldset>
-
-                <fieldset>
-                    <legend><i class="fas fa-calendar-alt"></i> Schedule</legend>
-                    <div class="form-row">
-                        <div>
-                            <label for="date_submitted">Date Submitted</label>
-                            <input type="date" id="date_submitted" name="date_submitted" value="<?= $_POST['date_submitted'] ?? date('Y-m-d') ?>" required>
-                        </div>
-                        <div>
-                            <label for="due_date">Due Date</label>
-                            <input type="date" id="due_date" name="due_date" value="<?= $_POST['due_date'] ?? '' ?>" required>
-                        </div>
-                    </div>
-                </fieldset>
-
-                <button type="submit" class="btn register-btn">
-                    <i class="fas fa-paper-plane"></i> Submit Homework
-                </button>
-            </form>
-        </div>
-
-        <div class="right-panel">
-            <h1>
-                Submit<br>
-                Homework<br>
-                for<br>
-                <strong><?= htmlspecialchars($subject_name) ?></strong>
-            </h1>
-        </div>
+    <!-- RIGHT PANEL — Dark brand panel -->
+    <div class="right-panel">
+        <a href="<?= BASE_URL ?>teachersportal/tasks.php" class="back-arrow" title="Back">↩</a>
+        <h1>Submit<br>Homework<br>for<br><strong><?= htmlspecialchars($subject_name) ?></strong></h1>
     </div>
+
+    <!-- LEFT PANEL — Form panel -->
+    <div class="left-panel">
+        <div class="icon"><i class="fas fa-book"></i></div>
+        <h2><?= $task_title ?></h2>
+        <p>Create and submit homework for <strong><?= htmlspecialchars($subject_name) ?></strong></p>
+
+        <?php if (isset($success)): ?>
+            <div class="message message-success">
+                <i class="fas fa-check-circle"></i>
+                <?= htmlspecialchars($success) ?>
+            </div>
+        <?php endif; ?>
+        <?php if (isset($error)): ?>
+            <div class="message message-error">
+                <i class="fas fa-exclamation-triangle"></i>
+                <?= htmlspecialchars($error) ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" enctype="multipart/form-data" class="register-form">
+
+            <fieldset>
+                <legend><i class="fas fa-book"></i> Homework Details</legend>
+
+                <label for="title">Title</label>
+                <input type="text" id="title" name="title"
+                       value="<?= htmlspecialchars($_POST['title'] ?? '') ?>" required>
+
+                <label for="description">Description</label>
+                <textarea id="description" name="description" required><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
+
+                <label for="file">Attachment File</label>
+                <input type="file" id="file" name="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                <small style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 4px;">
+                    Max 10MB. PDF, Word, Images. Optional.
+                </small>
+            </fieldset>
+
+            <fieldset>
+                <legend><i class="fas fa-calendar-alt"></i> Schedule</legend>
+                <div class="form-row">
+                    <div>
+                        <label for="due_date">Due Date</label>
+                        <input type="date" id="due_date" name="due_date"
+                               value="<?= $_POST['due_date'] ?? '' ?>" required>
+                    </div>
+                </div>
+            </fieldset>
+
+            <button type="submit" class="btn register-btn">
+                <i class="fas fa-paper-plane"></i> Submit Homework
+            </button>
+        </form>
+    </div>
+
+</div>
 </body>
 </html>

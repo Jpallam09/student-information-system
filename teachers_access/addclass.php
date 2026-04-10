@@ -86,35 +86,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Class | Teacher Portal</title>
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="<?= asset('css/teachersaccess.css') ?>">
 </head>
 <body>
 
 <div class="container">
+
+    <!-- RIGHT PANEL — Dark brand panel -->
+    <div class="right-panel">
+        <a href="<?= BASE_URL ?>teachersportal/subjects.php" class="back-arrow" title="Back">↩</a>
+        <h1>Class<br>Management</h1>
+    </div>
+
+    <!-- LEFT PANEL — Form panel -->
     <div class="left-panel">
-
-        <a href="<?= BASE_URL ?>teachersportal/subjects.php" class="back-arrow">↩</a>
-
         <div class="icon"><i class="fas fa-school"></i></div>
         <h2>Add Class</h2>
-
         <p>Create a new section for: <strong><?= htmlspecialchars($selected_course) ?></strong></p>
 
         <?php if (!empty($message)): ?>
             <div class="message <?= $message_type ?>">
-                <i class="fas <?= $message_type == 'success' ? 'fa-check-circle' : 'fa-exclamation-circle' ?>"></i>
+                <i class="fas <?= $message_type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle' ?>"></i>
                 <?= htmlspecialchars($message) ?>
             </div>
         <?php endif; ?>
 
         <form method="POST" class="register-form">
             <fieldset>
-                <legend>Class Information</legend>
+                <legend><i class="fas fa-layer-group"></i> Class Information</legend>
 
                 <div class="form-row">
-
                     <div>
                         <label for="section">Section</label>
                         <input type="text"
@@ -138,32 +143,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                             <option value="4th Year">4th Year</option>
                         </select>
                     </div>
-
                 </div>
             </fieldset>
 
-            <div style="display: flex; gap: 12px; margin-top: 20px;">
-
+            <div style="display: flex; gap: 12px; margin-top: 8px;">
                 <button type="submit" class="btn register-btn" style="flex: 1;">
                     <i class="fas fa-plus"></i> Add Class
                 </button>
-
                 <a href="<?= BASE_URL ?>teachersportal/subjects.php"
                    class="btn"
-                   style="flex: 1; background: var(--slate-500); color: white; text-decoration: none;">
+                   style="flex: 1; background: var(--slate-500); color: white; text-decoration: none; margin-top: 8px;">
                     <i class="fas fa-times"></i> Cancel
                 </a>
-
             </div>
         </form>
-
-    </div>
-
-    <div class="right-panel">
-        <h1>Class<br>Management</h1>
     </div>
 
 </div>
-
 </body>
 </html>

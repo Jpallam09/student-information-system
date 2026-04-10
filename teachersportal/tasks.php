@@ -191,7 +191,7 @@ $subjects_query = mysqli_query(
                             <span class="notification-icon" data-subject-id="<?= $subject['id'] ?>" data-subject-name="<?= htmlspecialchars($subject['subject_name']) ?>" title="View submissions" style="cursor: pointer;">
                                 <i class="fas fa-bell"></i>
                                 <?php if (!empty($subject['unread_count']) && $subject['unread_count'] > 0): ?>
-                                    <span class="notification-count"><?= $subject['unread_count'] ?></span>
+<span class="notification-count" style="background: #e53e3e; color: #fff; font-size: 10px; font-weight: 700; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; line-height: 1;"><?= $subject['unread_count'] ?></span>
                                 <?php endif; ?>
                             </span>
                         </div>

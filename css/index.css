@@ -43,7 +43,6 @@
     /* Surfaces */
     --bg-page:    #0f172a;
     --bg-card:    #ffffff;
-    --bg-left:    linear-gradient(160deg, #1e3a5f 0%, #0f1f3d 60%, #0a1628 100%);
 
     /* Text */
     --text-primary:   #0f172a;
@@ -105,9 +104,139 @@ body {
 }
 
 /* =========================
-   LEFT PANEL
+   LEFT PANEL — now WHITE (was dark)
 ========================= */
 .left-panel {
+    width: 62%;
+    background: var(--bg-card);
+    padding: 60px 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    animation: fadeLeft 0.8s 0.1s ease both;
+    opacity: 0;
+}
+
+.left-accent {
+    position: absolute;
+    top: -60px;
+    left: -60px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, #dbeafe 0%, transparent 68%);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.left-content {
+    position: relative;
+    z-index: 1;
+}
+
+/* =========================
+   EYEBROW
+========================= */
+.eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.eyebrow__line {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--primary-blue);
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+.eyebrow__text {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--primary-blue);
+}
+
+/* =========================
+   MAIN TITLE
+========================= */
+.main-title {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 4.8vw, 58px);
+    font-weight: 700;
+    line-height: 1.09;
+    color: var(--primary-dark);
+    margin-bottom: 22px;
+    transition: var(--transition);
+}
+
+.main-title__accent {
+    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* =========================
+   SUBTITLE
+========================= */
+.subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.75;
+    max-width: 380px;
+    margin-bottom: 36px;
+    font-weight: 400;
+}
+
+/* =========================
+   FEATURE PILLS
+========================= */
+.features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.feature-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    background: var(--slate-50);
+    border: 1px solid var(--border-light);
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.03em;
+    transition: var(--transition);
+}
+
+.feature-pill:hover {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: var(--primary-blue);
+}
+
+.feature-pill__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary-blue);
+    flex-shrink: 0;
+}
+
+/* =========================
+   RIGHT PANEL — now DARK (was white)
+========================= */
+.right-panel {
     width: 38%;
     background: linear-gradient(160deg, #1e3a5f 0%, #0f1f3d 60%, #0a1628 100%);
     padding: 52px 36px;
@@ -117,7 +246,7 @@ body {
     justify-content: center;
     position: relative;
     overflow: hidden;
-    animation: fadeLeft 0.8s 0.1s ease both;
+    animation: fadeRight 0.8s 0.25s ease both;
     opacity: 0;
 }
 
@@ -130,7 +259,7 @@ body {
 
 .deco-circle--top {
     top: -80px;
-    right: -80px;
+    left: -80px;
     width: 260px;
     height: 260px;
     border: 1px solid rgba(255, 255, 255, 0.04);
@@ -138,7 +267,7 @@ body {
 
 .deco-circle--bottom {
     bottom: -100px;
-    left: -60px;
+    right: -60px;
     width: 300px;
     height: 300px;
     border: 1px solid rgba(255, 255, 255, 0.03);
@@ -280,136 +409,6 @@ body {
 }
 
 /* =========================
-   RIGHT PANEL
-========================= */
-.right-panel {
-    width: 62%;
-    background: var(--bg-card);
-    padding: 60px 56px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    animation: fadeRight 0.8s 0.25s ease both;
-    opacity: 0;
-}
-
-.right-accent {
-    position: absolute;
-    top: -60px;
-    right: -60px;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, #dbeafe 0%, transparent 68%);
-    opacity: 0.55;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.right-content {
-    position: relative;
-    z-index: 1;
-}
-
-/* =========================
-   EYEBROW
-========================= */
-.eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 22px;
-}
-
-.eyebrow__line {
-    display: block;
-    width: 24px;
-    height: 2px;
-    background: var(--primary-blue);
-    border-radius: 1px;
-    flex-shrink: 0;
-}
-
-.eyebrow__text {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--primary-blue);
-}
-
-/* =========================
-   MAIN TITLE
-========================= */
-.main-title {
-    font-family: var(--font-display);
-    font-size: clamp(36px, 4.8vw, 58px);
-    font-weight: 700;
-    line-height: 1.09;
-    color: var(--primary-dark);
-    margin-bottom: 22px;
-    transition: var(--transition);
-}
-
-.main-title__accent {
-    background: linear-gradient(135deg, var(--primary-navy) 0%, var(--primary-blue) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* =========================
-   SUBTITLE
-========================= */
-.subtitle {
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.75;
-    max-width: 380px;
-    margin-bottom: 36px;
-    font-weight: 400;
-}
-
-/* =========================
-   FEATURE PILLS
-========================= */
-.features {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.feature-pill {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 6px 14px;
-    background: var(--slate-50);
-    border: 1px solid var(--border-light);
-    border-radius: 50px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    letter-spacing: 0.03em;
-    transition: var(--transition);
-}
-
-.feature-pill:hover {
-    background: #eff6ff;
-    border-color: #bfdbfe;
-    color: var(--primary-blue);
-}
-
-.feature-pill__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--primary-blue);
-    flex-shrink: 0;
-}
-
-/* =========================
    ANIMATIONS
 ========================= */
 @keyframes cardIn {
@@ -523,7 +522,7 @@ body {
         border: 1px solid #ccc;
     }
 
-    .left-panel {
+    .right-panel {
         background: #1e3a5f !important;
     }
 

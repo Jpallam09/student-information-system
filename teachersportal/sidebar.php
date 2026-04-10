@@ -48,29 +48,6 @@ if (!$is_admin && isset($_SESSION['teacher_id'])) {
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        /* ── Sidebar flex gap + label fill ── */
-        .sidebar a                 { gap: 10px; }
-        .sidebar a span.link-label { flex: 1; }
-
-        /* ── Notification badge ── */
-        .notification-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #e53e3e;
-            color: #fff;
-            font-size: 10px;
-            font-weight: 700;
-            min-width: 18px;
-            height: 18px;
-            padding: 0 5px;
-            border-radius: 9px;
-            margin-left: auto;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-    </style>
 </head>
 <body>
     <!-- Hamburger Menu Button (Mobile) -->
