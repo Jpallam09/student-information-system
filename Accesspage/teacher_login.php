@@ -120,7 +120,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <p class="register-text">
             Don't have an account?
-            <a href="<?php echo BASE_URL; ?>Accesspage/teachers_register.php" class="register-link">Register Here</a>
+        <a href="<?php echo BASE_URL; ?>Accesspage/teachers_register.php?public=1" class="register-link">Register Here</a>
         </p>
     </div>
 

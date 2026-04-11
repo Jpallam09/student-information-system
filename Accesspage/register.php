@@ -79,38 +79,38 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-   // ================== INSERT STUDENT WITH STATUS ==================
-$insertStmt = $conn->prepare("
-    INSERT INTO students (
-        student_id, first_name, middle_name, last_name, suffix,
-        dob, age, place_of_birth, gender, civil_status, nationality, religion, student_type,
-        course, year_level, section, school_year, semester,
-        email, mobile, home_address, zip_code,
-        emergency_person, emergency_number,
-        father_name, mother_name, guardian_name, parent_contact, parent_occupation, parent_employer,
-        last_school_attended, last_school_address,
-        blood_type, medical_conditions, allergies,
-        password, status
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-");
+    $insertStmt = $conn->prepare("
+        INSERT INTO students (
+            student_id, first_name, middle_name, last_name, suffix,
+            dob, age, place_of_birth, gender, civil_status, nationality, religion, student_type,
+            course, year_level, section, school_year, semester,
+            email, mobile, home_address, zip_code,
+            emergency_person, emergency_number,
+            father_name, mother_name, guardian_name, parent_contact, parent_occupation, parent_employer,
+            last_school_attended, last_school_address,
+            blood_type, medical_conditions, allergies,
+            password, status
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ");
 
-$insertStmt->bind_param(
-    "ssssssisssssssssssssssssssssssssssssss",
-    $student_id, $first_name, $middle_name, $last_name, $suffix,
-    $dob, $age, $place_of_birth, $gender, $civil_status, $nationality, $religion, $student_type,
-    $course, $year_level, $section, $school_year, $semester,
-    $email, $mobile, $home_address, $zip_code,
-    $emergency_person, $emergency_number,
-    $father_name, $mother_name, $guardian_name, $parent_contact, $parent_occupation, $parent_employer,
-    $last_school_attended, $last_school_address,
-    $blood_type, $medical_conditions, $allergies,
-    $hashed_password, $status
-);
+    $insertStmt->bind_param(
+        "ssssssisssssssssssssssssssssssssssssss",
+        $student_id, $first_name, $middle_name, $last_name, $suffix,
+        $dob, $age, $place_of_birth, $gender, $civil_status, $nationality, $religion, $student_type,
+        $course, $year_level, $section, $school_year, $semester,
+        $email, $mobile, $home_address, $zip_code,
+        $emergency_person, $emergency_number,
+        $father_name, $mother_name, $guardian_name, $parent_contact, $parent_occupation, $parent_employer,
+        $last_school_attended, $last_school_address,
+        $blood_type, $medical_conditions, $allergies,
+        $hashed_password, $status
+    );
+
     if ($insertStmt->execute()) {
         if ($from === 'teacher') {
-header("Location: " . BASE_URL . "teachersportal/students.php");
+            header("Location: " . BASE_URL . "teachersportal/students.php");
         } else {
-header("Location: " . BASE_URL . "Accesspage/student_login.php");
+            header("Location: " . BASE_URL . "Accesspage/student_login.php");
         }
         exit();
     } else {
@@ -132,16 +132,23 @@ header("Location: " . BASE_URL . "Accesspage/student_login.php");
 <link rel="icon" href="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>">
 </head>
 <body>
+
 <div class="container">
+
+    <!-- RIGHT PANEL — Dark brand panel (sticky) -->
     <div class="right-panel">
         <a href="<?= ($from === 'teacher') ? BASE_URL . 'teachersportal/students.php' : BASE_URL . 'Accesspage/student_login.php' ?>" class="back-arrow" title="Back">↩</a>
         <h1>Student<br>Management<br>System</h1>
     </div>
+
+    <!-- LEFT PANEL — Form panel -->
     <div class="left-panel">
         <div class="icon"><i class="fas fa-user-plus"></i></div>
         <h2>Student Registration</h2>
         <p>Complete all fields to create your account</p>
+
         <form action="register.php<?= ($from === 'teacher') ? '?from=teacher' : '' ?>" method="POST" class="register-form">
+
             <fieldset>
                 <legend><i class="fas fa-user"></i> Basic Personal Information</legend>
                 <div class="form-row">
@@ -150,42 +157,88 @@ header("Location: " . BASE_URL . "Accesspage/student_login.php");
                 </div>
                 <div class="form-row">
                     <input type="text" name="last_name" placeholder="Last Name *" required oninput="this.value = this.value.toUpperCase()">
-                    <input type="text" name="suffix" placeholder="Suffix">
+                    <input type="text" name="suffix" placeholder="Suffix (Jr., Sr.)">
                 </div>
                 <div class="form-row">
                     <div>
                         <label>Date of Birth</label>
                         <input type="date" name="dob" required onchange="calculateAge(this)">
                     </div>
-                    <input type="number" name="age" placeholder="Age *" required>
+                    <div>
+                        <label>Age</label>
+                        <input type="number" name="age" placeholder="Auto-calculated" required>
+                    </div>
                 </div>
                 <div class="form-row">
                     <input type="text" name="place_of_birth" placeholder="Place of Birth" oninput="this.value = this.value.toLowerCase().replace(/\b\w/g, l => l.toUpperCase())">
-                    <select name="gender" required><option value="">Gender *</option><option value="Male">Male</option><option value="Female">Female</option></select>
+                    <select name="gender" required>
+                        <option value="">Gender *</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
                 </div>
                 <div class="form-row">
-                    <select name="civil_status" required><option value="">Civil Status *</option><option value="Single">Single</option><option value="Married">Married</option><option value="Widowed">Widowed"></option></select>
-                    <select name="nationality" required><option value="">Nationality *</option><option value="Filipino">Filipino</option><option value="Other">Other</option></select>
+                    <select name="civil_status" required>
+                        <option value="">Civil Status *</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Widowed">Widowed</option>
+                    </select>
+                    <select name="nationality" required>
+                        <option value="">Nationality *</option>
+                        <option value="Filipino">Filipino</option>
+                        <option value="Other">Other</option>
+                    </select>
                 </div>
                 <div class="form-row">
                     <input type="text" name="religion" placeholder="Religion">
-                    <select name="student_type" required><option value="">Student Type *</option><option value="New">New</option><option value="Transferee">Transferee</option><option value="Continuing">Continuing</option></select>
+                    <select name="student_type" required>
+                        <option value="">Student Type *</option>
+                        <option value="New">New</option>
+                        <option value="Transferee">Transferee</option>
+                        <option value="Continuing">Continuing</option>
+                    </select>
                 </div>
             </fieldset>
 
             <fieldset>
                 <legend><i class="fas fa-graduation-cap"></i> Academic Information</legend>
                 <div class="form-row">
-                    <select name="course" required><option value="">Course *</option><option value="BSIT">BSIT</option><option value="BSED">BSED</option><option value="BAT">BAT</option><option value="BTVTED">BTVTED</option></select>
-                    <select name="year_level" required><option value="">Year Level *</option><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select>
+                    <select name="course" required>
+                        <option value="">Course *</option>
+                        <option value="BSIT">BSIT</option>
+                        <option value="BSED">BSED</option>
+                        <option value="BAT">BAT</option>
+                        <option value="BTVTED">BTVTED</option>
+                    </select>
+                    <select name="year_level" required>
+                        <option value="">Year Level *</option>
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                        <option value="4th Year">4th Year</option>
+                    </select>
                 </div>
                 <div class="form-row">
-                    <select name="section" required><option value="">Section *</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D"></option></select>
-                    <input type="text" name="school_year" value="<?= htmlspecialchars($active_year) ?>" placeholder="School Year * (<?= htmlspecialchars($active_year) ?>)" readonly>
+                    <select name="section" required>
+                        <option value="">Section *</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                    </select>
+                    <input type="text" name="school_year" value="<?= htmlspecialchars($active_year) ?>" placeholder="School Year *" readonly>
                 </div>
                 <div class="form-row">
-                    <select name="semester" required><option value="1st" <?= $active_sem=='1st'?'selected':'' ?>>1st Semester</option><option value="2nd" <?= $active_sem=='2nd'?'selected':'' ?>>2nd Semester</option></select>
-                    <select name="status" required><option value="">Status *</option><option value="Regular">Regular</option><option value="Irregular">Irregular</option></select>
+                    <select name="semester" required>
+                        <option value="1st" <?= $active_sem=='1st'?'selected':'' ?>>1st Semester</option>
+                        <option value="2nd" <?= $active_sem=='2nd'?'selected':'' ?>>2nd Semester</option>
+                    </select>
+                    <select name="status" required>
+                        <option value="">Status *</option>
+                        <option value="Regular">Regular</option>
+                        <option value="Irregular">Irregular</option>
+                    </select>
                 </div>
                 <div class="form-row">
                     <input type="text" name="last_school_attended" placeholder="Last School Attended">
@@ -196,26 +249,26 @@ header("Location: " . BASE_URL . "Accesspage/student_login.php");
             <fieldset>
                 <legend><i class="fas fa-address-book"></i> Contact Information</legend>
                 <div class="form-row">
-                    <input type="email" name="email" placeholder="Email *" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}" required>
-                    <input type="text" name="mobile" placeholder="Mobile (09171234567)" maxlength="11" pattern="\\d{11}" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    <input type="email" name="email" placeholder="Email Address *" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}" required>
+                    <input type="text" name="mobile" placeholder="Mobile (09171234567)" maxlength="11" pattern="\d{11}" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 </div>
                 <textarea name="home_address" placeholder="Complete Home Address *" required></textarea>
                 <div class="form-row">
-                    <input type="text" name="zip_code" placeholder="Zip Code (3315)" maxlength="4" pattern="\\d{4}" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                    <input type="text" name="emergency_person" placeholder="Emergency Contact">
+                    <input type="text" name="zip_code" placeholder="Zip Code (3315)" maxlength="4" pattern="\d{4}" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    <input type="text" name="emergency_person" placeholder="Emergency Contact Person">
                 </div>
-                <input type="text" name="emergency_number" placeholder="Emergency Number (09171234567)" maxlength="11" pattern="\\d{11}" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                <input type="text" name="emergency_number" placeholder="Emergency Number (09171234567)" maxlength="11" pattern="\d{11}" required oninput="this.value=this.value.replace(/[^0-9]/g,'')">
             </fieldset>
 
             <fieldset>
-                <legend><i class="fas fa-users"></i> Parent/Guardian Information</legend>
+                <legend><i class="fas fa-users"></i> Parent / Guardian Information</legend>
                 <div class="form-row">
                     <input type="text" name="father_name" placeholder="Father's Name">
                     <input type="text" name="mother_name" placeholder="Mother's Name">
                 </div>
                 <div class="form-row">
                     <input type="text" name="guardian_name" placeholder="Guardian Name">
-                    <input type="text" name="parent_contact" placeholder="Parent Contact (09171234567)" maxlength="11" pattern="\\d{11}" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                    <input type="text" name="parent_contact" placeholder="Parent Contact (09171234567)" maxlength="11" pattern="\d{11}" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                 </div>
                 <div class="form-row">
                     <input type="text" name="parent_occupation" placeholder="Parent Occupation">
@@ -243,9 +296,13 @@ header("Location: " . BASE_URL . "Accesspage/student_login.php");
                 </div>
             </fieldset>
 
-            <button type="submit" class="btn register-btn"><?= ($from === 'teacher') ? 'Add Student' : 'Register Account' ?></button>
+            <button type="submit" class="btn register-btn">
+                <i class="fas fa-user-plus"></i>
+                <?= ($from === 'teacher') ? 'Add Student' : 'Register Account' ?>
+            </button>
         </form>
     </div>
+
 </div>
 
 <script>

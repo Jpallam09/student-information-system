@@ -9,20 +9,20 @@ session_start();
 require_once dirname(__DIR__) . '/config/paths.php';
 require_once PROJECT_ROOT . '/config/database.php';
 
-if(!isset($_SESSION['teacher_id'])){
+$public_mode = isset($_GET['public']);
+$from_admin = isset($_GET['from']) && $_GET['from'] === 'admin';
+
+if (!$public_mode && !isset($_SESSION['teacher_id'])) {
     header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
     exit();
 }
-
 $admin_types = ['Seeder', 'Administrator'];
-$is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types);
+$is_admin = isset($_SESSION['teacher_type']) && in_array($_SESSION['teacher_type'], $admin_types) && !$public_mode;
 
-if(!$is_admin){
+if (!$public_mode && !$is_admin) {
     header("Location: " . BASE_URL . "teachersportal/dashboard.php");
     exit();
 }
-
-$from_admin = isset($_GET['from']) && $_GET['from'] === 'admin';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $nationality      = trim($_POST['nationality']);
     $teacher_type     = trim($_POST['teacher_type']);
     $course           = trim($_POST['course']);
-    
+
     $year_levels      = isset($_POST['year_levels']) ? implode(',', $_POST['year_levels']) : '';
     $sections         = isset($_POST['sections']) ? implode(',', $_POST['sections']) : '';
 
@@ -71,7 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     year_levels, sections,
                     email, mobile, home_address, emergency_person, emergency_number,
                     password
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $insertStmt->bind_param(
@@ -84,15 +84,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             );
 
             if ($insertStmt->execute()) {
-                    if($from_admin){
-                        header("Location: " . BASE_URL . "teachersportal/teachers_list.php?msg=teacher_added");
-                    } else {
-                        header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
-                    }
-                    exit();
+                if($from_admin){
+                    header("Location: " . BASE_URL . "teachersportal/teachers_list.php?msg=teacher_added");
+                } elseif($public_mode) {
+                    header("Location: " . BASE_URL . "Accesspage/teacher_login.php?success=1");
                 } else {
-                    $error_msg = "Database Error: " . $conn->error;
+                    header("Location: " . BASE_URL . "Accesspage/teacher_login.php");
                 }
+                exit();
+            } else {
+                $error_msg = "Database Error: " . $conn->error;
+            }
         }
     }
 }
@@ -111,11 +113,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <link rel="icon" href="<?= asset('images/622685015_925666030131412_6886851389087569993_n.jpg') ?>">
 </head>
 <body>
+
 <div class="container">
+
+    <!-- RIGHT PANEL — Dark brand panel (sticky) -->
     <div class="right-panel">
-        <a href="<?= $from_admin ? BASE_URL . "teachersportal/teachers_list.php" : BASE_URL . "Accesspage/teacher_login.php" ?>" class="back-arrow" title="Back">↩</a>
-        <h1><?= $from_admin ? "Add New Teacher" : "Teacher" ?><br>Management<br>System</h1>
+        <a href="<?= ($from_admin ? BASE_URL . 'teachersportal/teachers_list.php' : ($public_mode ? BASE_URL . 'Accesspage/teacher_login.php' : BASE_URL . 'Accesspage/teacher_login.php')) ?>" class="back-arrow" title="Back">↩</a>
+        <h1><?= $from_admin ? 'Add New<br>Teacher' : 'Teacher' ?><br>Management<br>System</h1>
     </div>
+
+    <!-- LEFT PANEL — Form panel -->
     <div class="left-panel">
         <div class="icon"><i class="fas fa-chalkboard-teacher"></i></div>
         <h2>Teacher Registration</h2>
@@ -128,6 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <?php endif; ?>
 
         <form action="" method="POST" class="register-form">
+
             <fieldset>
                 <legend><i class="fas fa-user"></i> Basic Personal Information</legend>
                 <input type="text" name="teacher_id" placeholder="Teacher ID (e.g., 26-T001)" pattern="[0-9]{2}-[A-Z]?[0-9]{3,4}" title="Format: YY-DeptNum (e.g., 26-T001)" maxlength="8" required>
@@ -144,11 +152,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                         <label>Date of Birth</label>
                         <input type="date" name="dob" required onchange="calculateAge(this)">
                     </div>
-                    <input type="number" name="age" placeholder="Age *" required>
+                    <div>
+                        <label>Age</label>
+                        <input type="number" name="age" placeholder="Auto-calculated" required>
+                    </div>
                 </div>
                 <div class="form-row">
-                    <select name="gender" required><option value="">Gender *</option><option value="Male">Male</option><option value="Female">Female</option></select>
-                    <select name="civil_status" required><option value="">Civil Status *</option><option value="Single">Single</option><option value="Married">Married</option><option value="Widowed">Widowed</option></select>
+                    <select name="gender" required>
+                        <option value="">Gender *</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                    <select name="civil_status" required>
+                        <option value="">Civil Status *</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Widowed">Widowed</option>
+                    </select>
                 </div>
                 <div class="form-row">
                     <input type="text" name="nationality" placeholder="Nationality *" required>
@@ -158,8 +178,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <fieldset>
                 <legend><i class="fas fa-graduation-cap"></i> Academic Assignment</legend>
-                <select name="course" required><option value="">Primary Course *</option><option value="BSIT">BSIT</option><option value="BSED">BSED</option><option value="BAT">BAT</option><option value="BTVTED">BTVTED</option></select>
-                
+                <select name="course" required>
+                    <option value="">Primary Course *</option>
+                    <option value="BSIT">BSIT</option>
+                    <option value="BSED">BSED</option>
+                    <option value="BAT">BAT</option>
+                    <option value="BTVTED">BTVTED</option>
+                </select>
+
                 <div class="checkbox-group">
                     <label><strong>Year Levels:</strong></label>
                     <label><input type="checkbox" name="year_levels[]" value="1st Year"> 1st Year</label>
@@ -167,13 +193,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     <label><input type="checkbox" name="year_levels[]" value="3rd Year"> 3rd Year</label>
                     <label><input type="checkbox" name="year_levels[]" value="4th Year"> 4th Year</label>
                 </div>
+
                 <div class="checkbox-group">
                     <label><strong>Sections:</strong></label>
-                    <label><input type="checkbox" name="sections[]" value="A"> A</label>
-                    <label><input type="checkbox" name="sections[]" value="B"> B</label>
-                    <label><input type="checkbox" name="sections[]" value="C"> C</label>
-                    <label><input type="checkbox" name="sections[]" value="D"> D</label>
-                    <label><input type="checkbox" name="sections[]" value="E"> E</label>
+                    <label><input type="checkbox" name="sections[]" value="A"> Section A</label>
+                    <label><input type="checkbox" name="sections[]" value="B"> Section B</label>
+                    <label><input type="checkbox" name="sections[]" value="C"> Section C</label>
+                    <label><input type="checkbox" name="sections[]" value="D"> Section D</label>
+                    <label><input type="checkbox" name="sections[]" value="E"> Section E</label>
                 </div>
             </fieldset>
 
@@ -202,9 +229,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 </div>
             </fieldset>
 
-            <button type="submit" class="btn register-btn"><i class="fas fa-user-plus"></i> Register Teacher</button>
+            <button type="submit" class="btn register-btn">
+                <i class="fas fa-user-plus"></i> Register Teacher
+            </button>
         </form>
     </div>
+
 </div>
 
 <script>
