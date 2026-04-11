@@ -1,10 +1,9 @@
-# TODO: Add search bar to grades.php like students.php
+# TODO: Fix Delete Button Icon Color in Announcements.php
 
-## Plan Breakdown
-- [ ] Step 1: Create TODO.md (current)
-- [ ] Step 2: Edit teachersportal/grades.php to add PHP $search logic and query filter
-- [ ] Step 3: Verify changes with attempt_completion
-
-✅ Step 1 complete.
-✅ Step 2 complete: Edited teachersportal/grades.php with search bar (UI + PHP logic matching students.php).
+## Plan Progress
+- [x] Understand files (announcements.php, teacherportal.css)
+- [x] Create edit plan and get approval
+- [x] Step 1: Edit css/teacherportal.css to make list & modal trash icons red
+- [x] Step 2: Test the change
+- [ ] Step 3: Complete task
 
