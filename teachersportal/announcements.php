@@ -130,7 +130,7 @@ $priority_map = [
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
             <?php if ($total > 0): ?>
-                <span class="result-count"><i class="fas fa-bullhorn"></i> <?= $total ?> announcement<?= $total !== 1 ? 's' : '' ?></span>
+                <span class="result-count" id="annResultCount"><i class="fas fa-bullhorn"></i> <?= $total ?> announcement<?= $total !== 1 ? 's' : '' ?></span>
             <?php endif; ?>
             <button type="button" onclick="openAddModal()" style="border-radius:50px;">
                 <i class="fas fa-plus"></i> New Announcement
@@ -174,11 +174,20 @@ $priority_map = [
             </select>
             <div class="search-input-wrap">
                 <i class="fas fa-search"></i>
-                <input type="text" name="search" placeholder="Search announcements…" value="<?= htmlspecialchars($search) ?>">
+                <input type="text"
+                       id="annSearchInput"
+                       name="search"
+                       placeholder="Search announcements…"
+                       value="<?= htmlspecialchars($search) ?>"
+                       autocomplete="off">
             </div>
             <button type="submit"><i class="fas fa-search"></i> Search</button>
             <?php if ($filter_priority || $filter_audience || $search): ?>
-                <a href="announcements.php" class="refresh-btn" title="Clear Filters">
+                <a href="announcements.php" class="refresh-btn" id="annSearchClear" title="Clear Filters">
+                    <i class="fas fa-rotate-right"></i> Clear
+                </a>
+            <?php else: ?>
+                <a href="announcements.php" class="refresh-btn" id="annSearchClear" title="Clear Filters" style="display:none;">
                     <i class="fas fa-rotate-right"></i> Clear
                 </a>
             <?php endif; ?>
@@ -187,11 +196,12 @@ $priority_map = [
 
     <!-- ── ANNOUNCEMENTS GRID ── -->
     <?php if (count($announcements) > 0): ?>
-    <div class="ann-grid">
+    <div class="ann-grid" id="annGrid">
         <?php foreach ($announcements as $ann):
             $pmap = $priority_map[$ann['priority']] ?? ['label'=>'Normal','class'=>'badge-blue'];
         ?>
-        <div class="ann-card <?= $ann['is_pinned'] ? 'is-pinned' : '' ?>">
+        <div class="ann-card <?= $ann['is_pinned'] ? 'is-pinned' : '' ?>"
+             data-search="<?= htmlspecialchars(strtolower($ann['title'] . ' ' . $ann['content'] . ' ' . ($ann['teacher_name'] ?? '') . ' ' . $ann['priority'] . ' ' . $ann['audience'])) ?>">
             <div class="ann-card-header">
                 <?php if ($ann['is_pinned']): ?>
                     <i class="fas fa-thumbtack ann-pin-icon"></i>
@@ -241,6 +251,17 @@ $priority_map = [
             </div>
         </div>
         <?php endforeach; ?>
+    </div>
+
+    <!-- Live-search empty state (hidden by default) -->
+    <div id="liveAnnEmpty" style="display:none;">
+        <div class="section-box">
+            <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+                <h3>No matching announcements</h3>
+                <p>Try a different keyword.</p>
+            </div>
+        </div>
     </div>
 
     <?php else: ?>
@@ -366,6 +387,113 @@ setTimeout(function(){
         setTimeout(function(){a.remove();},300);
     });
 },5000);
+
+
+/* ════════════════════════════════════════════════════════════════
+   LIVE SEARCH — filters the already-rendered .ann-card elements
+   client-side (no page reload, no backend calls)
+   ════════════════════════════════════════════════════════════════ */
+(function () {
+    const input      = document.getElementById('annSearchInput');
+    const clearBtn   = document.getElementById('annSearchClear');
+    const grid       = document.getElementById('annGrid');
+    const emptyLive  = document.getElementById('liveAnnEmpty');
+    const countEl    = document.getElementById('annResultCount');
+
+    if (!input || !grid) return;
+
+    // All rendered cards (data-search attribute holds pre-lowercased text)
+    const allCards = Array.from(grid.querySelectorAll('.ann-card'));
+    const totalRendered = allCards.length;
+
+    function applyFilter(q) {
+        const term = q.trim().toLowerCase();
+        let visible = 0;
+
+        allCards.forEach(card => {
+            const haystack = card.dataset.search || '';
+            const show = !term || haystack.includes(term);
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        // Show / hide clear button (only when no server-side filters active)
+        const hasServerFilters = new URLSearchParams(location.search).get('priority') ||
+                                 new URLSearchParams(location.search).get('audience') ||
+                                 new URLSearchParams(location.search).get('search');
+        if (clearBtn) clearBtn.style.display = (term || hasServerFilters) ? '' : 'none';
+
+        // Show / hide live empty state
+        if (emptyLive) {
+            emptyLive.style.display  = (visible === 0 && term) ? 'block' : 'none';
+            grid.style.display       = (visible === 0 && term) ? 'none'  : '';
+        }
+
+        // Update result count badge
+        if (countEl) {
+            const label = term ? visible : totalRendered;
+            countEl.innerHTML = `<i class="fas fa-bullhorn"></i> ${label} announcement${label !== 1 ? 's' : ''}`;
+        }
+    }
+
+    // Debounce — wait 180 ms after the user stops typing
+    let debounceTimer;
+    input.addEventListener('input', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => applyFilter(this.value), 180);
+    });
+
+    // Prevent form submission on Enter while live-filtering
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyFilter(this.value);
+        }
+    });
+
+    // Clear button: if only live search is active, reset without a page reload
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function (e) {
+            const serverSearch = new URLSearchParams(location.search).get('search');
+            const serverFilters = new URLSearchParams(location.search).get('priority') ||
+                                  new URLSearchParams(location.search).get('audience');
+            if (input.value.trim() && !serverSearch && !serverFilters) {
+                e.preventDefault();
+                input.value = '';
+                applyFilter('');
+                input.focus();
+            }
+            // Otherwise let the href reload naturally to clear server-side filters
+        });
+    }
+
+    // Run once on load in case browser autofilled the field
+    if (input.value.trim()) applyFilter(input.value);
+})();
+
+
+/* ════════════════════════════════════════════════════════════════
+   SCROLL POSITION — save on scroll, restore after reload
+   Uses sessionStorage so it resets when navigating to another page
+   ════════════════════════════════════════════════════════════════ */
+(function () {
+    const SCROLL_KEY = 'announcements_scrollY';
+
+    // Restore saved position as early as possible
+    const saved = sessionStorage.getItem(SCROLL_KEY);
+    if (saved !== null) {
+        requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));
+    }
+
+    // Save position on every scroll (throttled to ~10× per second)
+    let saveTimer;
+    window.addEventListener('scroll', function () {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+            sessionStorage.setItem(SCROLL_KEY, Math.round(window.scrollY));
+        }, 100);
+    }, { passive: true });
+})();
 </script>
 </body>
 </html>

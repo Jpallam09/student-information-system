@@ -1148,6 +1148,11 @@ button[type="submit"]:hover,
 }
 .btn-danger:hover { background: #e11d48; transform: translateY(-1px); }
 
+/* ── Specificity fix: button[type="submit"] (0,1,1) was beating .btn-danger (0,1,0).
+      button.btn-danger also has (0,1,1) and comes later, so it wins. ── */
+button.btn-danger       { background: var(--accent-rose) !important; color: #fff !important; }
+button.btn-danger:hover { background: #e11d48             !important; }
+
 #deleteModal h2 { color: var(--accent-rose); justify-content: center; }
 #deleteModal h2 i { color: var(--accent-rose); }
 
@@ -3198,6 +3203,3 @@ input.readonly-grade {
     }
     .quick-btn.present-btn:hover { background: rgba(16,185,129,0.08); border-color: var(--accent-emerald); color: #059669; }
     .quick-btn.absent-btn:hover  { background: rgba(244,63,94,0.08);  border-color: var(--accent-rose);    color: #e11d48; }
-
-
-

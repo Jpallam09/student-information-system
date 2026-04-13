@@ -179,6 +179,19 @@ $keep_open_ids = [];
 if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0])){
     $keep_open_ids = explode(',', $_POST['expanded_students'][0]);
 }
+
+// ================== BUILD AUTOCOMPLETE DATA ==================
+$autocomplete_data = [];
+mysqli_data_seek($students_query, 0);
+while($s = mysqli_fetch_assoc($students_query)){
+    $autocomplete_data[] = [
+        'id'      => $s['id'],
+        'name'    => $s['first_name'] . ' ' . $s['last_name'],
+        'section' => $s['section'],
+        'year'    => $s['year_level'],
+    ];
+}
+mysqli_data_seek($students_query, 0);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -192,6 +205,59 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= asset('css/teacherportal.css') ?>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/* ── Live Search Autocomplete ── */
+.search-input-wrap {
+    position: relative;
+}
+#search-suggestions {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(30,58,95,0.13);
+    z-index: 9999;
+    max-height: 280px;
+    overflow-y: auto;
+}
+.live-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.12s;
+}
+.live-suggestion:last-child { border-bottom: none; }
+.live-suggestion:hover,
+.live-suggestion.active {
+    background: #f0f6ff;
+}
+.live-suggestion .sug-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#1e3a5f,#2563eb);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.live-suggestion .sug-name {
+    font-weight: 600; font-size: 0.87rem; color: #1e293b;
+}
+.live-suggestion .sug-meta {
+    font-size: 0.74rem; color: #64748b; margin-top: 1px;
+}
+.sug-no-results {
+    padding: 14px 16px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    text-align: center;
+}
+</style>
 </head>
 <body>
 <?php include PROJECT_ROOT . '/teachersportal/sidebar.php'; ?>
@@ -225,7 +291,7 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
 
     <!-- FILTERS -->
     <div class="filter-group">
-        <form method="GET" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;width:100%;">
+        <form method="GET" id="filterForm" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;width:100%;">
             <select name="year_level" onchange="this.form.submit()" style="border-radius:50px;">
                 <option value="">All Year Levels</option>
                 <?php foreach($teacher_year_levels as $yl): ?>
@@ -239,12 +305,23 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
                 <?php endforeach; ?>
             </select>
 
+            <!-- ── Live Search Input ── -->
             <div class="search-input-wrap">
                 <i class="fas fa-search"></i>
-                <input type="text" name="search" placeholder="Search name, ID, or section…" value="<?= htmlspecialchars($search) ?>">
+                <input
+                    type="text"
+                    name="search"
+                    id="liveSearchInput"
+                    placeholder="Search name, ID, or section…"
+                    value="<?= htmlspecialchars($search) ?>"
+                    autocomplete="off"
+                    oninput="showSuggestions(this.value)"
+                    onkeydown="handleSearchKey(event)"
+                >
+                <div id="search-suggestions"></div>
             </div>
 
-            <button type="submit"><i class="fas fa-search"></i> Search</button>
+            <button type="submit" id="searchSubmitBtn"><i class="fas fa-search"></i> Search</button>
 
             <?php if($selected_year || $selected_section || $search): ?>
                 <a href="grades.php" class="refresh-btn" title="Clear Filters">
@@ -269,10 +346,7 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
                     </tr>
                 </thead>
                 <tbody>
-                <?php
-                mysqli_data_seek($students_query, 0);
-                while($student = mysqli_fetch_assoc($students_query)):
-                ?>
+                <?php while($student = mysqli_fetch_assoc($students_query)): ?>
                     <tr>
                         <td style="font-family:monospace;font-size:0.87rem;color:var(--text-muted);text-align:left;padding-left:20px;"><?= htmlspecialchars($student['id']) ?></td>
                         <td style="font-weight:600;color:var(--slate-800);text-align:left;"><?= htmlspecialchars($student['first_name'].' '.$student['last_name']) ?></td>
@@ -427,6 +501,126 @@ if(isset($_POST['expanded_students'][0]) && !empty($_POST['expanded_students'][0
 </div>
 
 <script>
+/* ══════════════════════════════════════════════
+   LIVE SEARCH / AUTOCOMPLETE
+══════════════════════════════════════════════ */
+const STUDENTS_DATA = <?= json_encode($autocomplete_data) ?>;
+let activeSuggestionIndex = -1;
+
+function showSuggestions(query) {
+    const box = document.getElementById('search-suggestions');
+    query = query.trim().toLowerCase();
+
+    if (!query) {
+        hideSuggestions();
+        return;
+    }
+
+    const matches = STUDENTS_DATA.filter(s =>
+        s.name.toLowerCase().includes(query) ||
+        String(s.id).includes(query) ||
+        s.section.toLowerCase().includes(query)
+    ).slice(0, 10);
+
+    if (!matches.length) {
+        box.innerHTML = '<div class="sug-no-results"><i class="fas fa-search" style="margin-right:6px;opacity:0.4;"></i>No students found</div>';
+        box.style.display = 'block';
+        activeSuggestionIndex = -1;
+        return;
+    }
+
+    box.innerHTML = matches.map((s, i) => `
+        <div class="live-suggestion" data-index="${i}" data-name="${escapeAttr(s.name)}"
+             onmousedown="selectSuggestion(event, '${escapeAttr(s.name)}')">
+            <div class="sug-avatar">${s.name.charAt(0).toUpperCase()}</div>
+            <div>
+                <div class="sug-name">${highlightMatch(s.name, query)}</div>
+                <div class="sug-meta">ID: ${s.id} &nbsp;·&nbsp; ${s.year} &nbsp;·&nbsp; ${s.section}</div>
+            </div>
+        </div>
+    `).join('');
+
+    box.style.display = 'block';
+    activeSuggestionIndex = -1;
+}
+
+function highlightMatch(text, query) {
+    const idx = text.toLowerCase().indexOf(query);
+    if (idx === -1) return escapeHtml(text);
+    return escapeHtml(text.slice(0, idx))
+         + '<mark style="background:#dbeafe;color:#1e40af;border-radius:3px;padding:0 2px;">'
+         + escapeHtml(text.slice(idx, idx + query.length))
+         + '</mark>'
+         + escapeHtml(text.slice(idx + query.length));
+}
+
+function selectSuggestion(e, name) {
+    e.preventDefault();
+    const input = document.getElementById('liveSearchInput');
+    input.value = name;
+    hideSuggestions();
+    document.getElementById('filterForm').submit();
+}
+
+function hideSuggestions() {
+    const box = document.getElementById('search-suggestions');
+    box.style.display = 'none';
+    box.innerHTML = '';
+    activeSuggestionIndex = -1;
+}
+
+function handleSearchKey(e) {
+    const box   = document.getElementById('search-suggestions');
+    const items = box.querySelectorAll('.live-suggestion');
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, items.length - 1);
+        highlightActive(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+        highlightActive(items);
+    } else if (e.key === 'Enter') {
+        if (activeSuggestionIndex >= 0 && items[activeSuggestionIndex]) {
+            e.preventDefault();
+            const name = items[activeSuggestionIndex].getAttribute('data-name');
+            document.getElementById('liveSearchInput').value = name;
+            hideSuggestions();
+            document.getElementById('filterForm').submit();
+        }
+        // else let the form submit normally via Enter
+    } else if (e.key === 'Escape') {
+        hideSuggestions();
+    }
+}
+
+function highlightActive(items) {
+    items.forEach((item, i) => {
+        item.classList.toggle('active', i === activeSuggestionIndex);
+    });
+    if (items[activeSuggestionIndex]) {
+        items[activeSuggestionIndex].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escapeAttr(str) {
+    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// Close suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.search-input-wrap')) {
+        hideSuggestions();
+    }
+});
+
+/* ══════════════════════════════════════════════
+   TOGGLE GRADES ROW (unchanged logic)
+══════════════════════════════════════════════ */
 function toggleDetails(id) {
     const row           = document.getElementById(id);
     const expandedInput = document.getElementById('expanded_students_input');
@@ -457,7 +651,7 @@ document.querySelectorAll('button[onclick^="toggleDetails"]').forEach(btn => {
         document.querySelectorAll('.student-details').forEach(row => {
             if(row.id !== currentId && row.style.display === 'table-row') {
                 row.style.display = 'none';
-                const btnEl = document.getElementById('btn-' + row.id);
+                const btnEl  = document.getElementById('btn-' + row.id);
                 const iconEl = document.getElementById('icon-' + row.id);
                 const textEl = document.getElementById('text-' + row.id);
                 if(btnEl) {
@@ -467,6 +661,32 @@ document.querySelectorAll('button[onclick^="toggleDetails"]').forEach(btn => {
                 }
             }
         });
+    });
+});
+
+/* ══════════════════════════════════════════════
+   SCROLL POSITION PERSISTENCE
+══════════════════════════════════════════════ */
+const SCROLL_KEY = 'grades_scroll_y';
+
+// Restore scroll on load
+window.addEventListener('load', () => {
+    const savedY = sessionStorage.getItem(SCROLL_KEY);
+    if (savedY !== null) {
+        window.scrollTo({ top: parseInt(savedY, 10), behavior: 'instant' });
+        sessionStorage.removeItem(SCROLL_KEY);
+    }
+});
+
+// Save scroll before navigating away / submitting
+window.addEventListener('beforeunload', () => {
+    sessionStorage.setItem(SCROLL_KEY, window.scrollY);
+});
+
+// Also save before form submissions (POST save & GET filter)
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', () => {
+        sessionStorage.setItem(SCROLL_KEY, window.scrollY);
     });
 });
 </script>

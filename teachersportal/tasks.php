@@ -254,14 +254,20 @@ $teacher_full_name = trim($teacher_row['full_name'] ?? ($_SESSION['teacher_name'
         <div class="top-bar" style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:1rem; align-items:center;">
             <h2><i class="fas fa-list-check"></i> Created Tasks</h2>
 
-            <form method="GET" class="tasks-search-form">
+            <form method="GET" class="tasks-search-form" id="tasksSearchForm">
                 <input type="text"
+                       id="taskSearchInput"
                        name="search"
                        placeholder="Search by title, subject, or type…"
-                       value="<?= htmlspecialchars($search) ?>">
+                       value="<?= htmlspecialchars($search) ?>"
+                       autocomplete="off">
                 <button type="submit"><i class="fas fa-search"></i> Search</button>
                 <?php if ($search !== ''): ?>
-                    <a href="tasks.php" class="refresh-btn" title="Clear search">
+                    <a href="tasks.php" class="refresh-btn" id="taskSearchClear" title="Clear search">
+                        <i class="fas fa-rotate-right"></i>
+                    </a>
+                <?php else: ?>
+                    <a href="tasks.php" class="refresh-btn" id="taskSearchClear" title="Clear search" style="display:none;">
                         <i class="fas fa-rotate-right"></i>
                     </a>
                 <?php endif; ?>
@@ -302,7 +308,7 @@ $teacher_full_name = trim($teacher_row['full_name'] ?? ($_SESSION['teacher_name'
         ?>
 
         <div class="table-container">
-            <table class="tasks-table">
+            <table class="tasks-table" id="tasksTable">
                 <thead>
                     <tr>
                         <th>Subject</th>
@@ -315,7 +321,7 @@ $teacher_full_name = trim($teacher_row['full_name'] ?? ($_SESSION['teacher_name'
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tasksTableBody">
                 <?php if ($tasks_query && $tasks_query->num_rows > 0): ?>
                     <?php while ($task = $tasks_query->fetch_assoc()):
                         $type_class = $task['task_type'] === 'activities' ? 'badge-act'
@@ -353,7 +359,7 @@ $teacher_full_name = trim($teacher_row['full_name'] ?? ($_SESSION['teacher_name'
                         </tr>
                     <?php endwhile; ?>
                 <?php else: ?>
-                    <tr>
+                    <tr id="noTasksRow">
                         <td colspan="8">
                             <div class="empty-state">
                                 <div class="empty-state-icon"><i class="fas fa-clipboard-list"></i></div>
@@ -367,6 +373,16 @@ $teacher_full_name = trim($teacher_row['full_name'] ?? ($_SESSION['teacher_name'
                 </tbody>
             </table>
         </div>
+
+        <!-- Live-search empty state (hidden by default) -->
+        <div id="liveSearchEmpty" style="display:none;">
+            <div class="empty-state">
+                <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+                <h3>No matching tasks</h3>
+                <p>Try a different keyword.</p>
+            </div>
+        </div>
+
     </div><!-- /.section-box created tasks -->
 
 </div><!-- /.content -->
@@ -594,6 +610,121 @@ cancelEl?.addEventListener('click',  closeDel);
 closeEl?.addEventListener('click',   closeDel);
 delModal?.addEventListener('click',  e => { if (e.target === delModal) closeDel(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && delModal?.classList.contains('show')) closeDel(); });
+
+
+/* ════════════════════════════════════════════════════════════════
+   LIVE SEARCH — filters the already-rendered table rows client-side
+   (no page reload, no extra PHP, no backend calls)
+   ════════════════════════════════════════════════════════════════ */
+(function () {
+    const input      = document.getElementById('taskSearchInput');
+    const clearBtn   = document.getElementById('taskSearchClear');
+    const tbody      = document.getElementById('tasksTableBody');
+    const emptyLive  = document.getElementById('liveSearchEmpty');
+    const tableWrap  = document.querySelector('.table-container');
+
+    if (!input || !tbody) return;
+
+    // Collect all data rows (skip the "no tasks" placeholder row if present)
+    const allRows = Array.from(tbody.querySelectorAll('tr')).filter(r => r.id !== 'noTasksRow');
+
+    // Extract searchable text from a row (cols: subject, type, title, description)
+    const rowText = row => {
+        const cells = row.querySelectorAll('td');
+        return [0, 1, 2, 3].map(i => cells[i]?.textContent ?? '').join(' ').toLowerCase();
+    };
+
+    // Cache text so we don't re-query the DOM every keystroke
+    const rowCache = allRows.map(r => ({ el: r, text: rowText(r) }));
+
+    function applyFilter(q) {
+        const term = q.trim().toLowerCase();
+        let visible = 0;
+
+        rowCache.forEach(({ el, text }) => {
+            const show = !term || text.includes(term);
+            el.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        // Show / hide clear button
+        if (clearBtn) clearBtn.style.display = term ? '' : 'none';
+
+        // Show / hide "no results" live state
+        const hasStaticEmpty = document.getElementById('noTasksRow');
+        if (emptyLive && tableWrap) {
+            if (!hasStaticEmpty) {                    // only when rows actually exist
+                emptyLive.style.display  = (visible === 0 && term) ? 'block' : 'none';
+                tableWrap.style.display  = (visible === 0 && term) ? 'none'  : '';
+            }
+        }
+    }
+
+    // Debounce — wait 180 ms after the user stops typing
+    let debounceTimer;
+    input.addEventListener('input', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => applyFilter(this.value), 180);
+    });
+
+    // Prevent form submission on Enter when live-filtering
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyFilter(this.value);
+        }
+    });
+
+    // Clear button resets live filter (stays on the page, no reload)
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function (e) {
+            // Only intercept when there is no server-side search active
+            if (input.value.trim() !== '' && !new URLSearchParams(location.search).get('search')) {
+                e.preventDefault();
+                input.value = '';
+                applyFilter('');
+                input.focus();
+            }
+            // If there IS a server search param, let the href=tasks.php reload naturally
+        });
+    }
+
+    // Run once on load in case the field has a value (e.g. browser autofill)
+    if (input.value.trim()) applyFilter(input.value);
+})();
+
+
+/* ════════════════════════════════════════════════════════════════
+   SCROLL POSITION — save on every scroll, restore after load
+   Uses sessionStorage so it survives F5 / browser-back but resets
+   when the user navigates away to another page.
+   ════════════════════════════════════════════════════════════════ */
+(function () {
+    const SCROLL_KEY = 'tasks_scrollY';
+
+    // Restore saved position as early as possible
+    const saved = sessionStorage.getItem(SCROLL_KEY);
+    if (saved !== null) {
+        // requestAnimationFrame lets the browser finish its own scroll-reset first
+        requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));
+    }
+
+    // Save position on every scroll (throttled to ~10× per second)
+    let saveTimer;
+    window.addEventListener('scroll', function () {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+            sessionStorage.setItem(SCROLL_KEY, Math.round(window.scrollY));
+        }, 100);
+    }, { passive: true });
+
+    // Clear the stored position when the user intentionally navigates away
+    // (clicks a link, submits a form that causes a real navigation)
+    window.addEventListener('beforeunload', function () {
+        // Keep the position only if it looks like a same-page reload (no hash change etc.)
+        // We intentionally do NOT clear here — let it persist across reloads.
+    });
+})();
 </script>
 </body>
 </html>
